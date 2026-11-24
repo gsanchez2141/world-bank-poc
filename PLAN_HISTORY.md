@@ -19,3 +19,9 @@ User reviews each MR before the next one starts. That review happened: `make pla
 Merged to `main` as `af1b325` (pull request #2).
 
 Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at most 100 rows, attempt prefixes, the raw manifest, CloudWatch logs for that image, and the ingest tests. `make test` runs those tests. This MR had no DAG.
+
+## Stage
+
+Stage. The `lakehouse-stage-world-bank` image reads completed raw extracts and replay selections, validates lineage, and records changed versions in the four Iceberg tables. It publishes the snapshot IDs and changed count needed by the consumer. A retry reconciles a committed snapshot without writing another version.
+
+Acceptance on saved responses covers initial stage, an unchanged rerun, historical corrections, numeric-to-null and null-to-numeric transitions, omitted keys, older replays and resumes, malformed raw inputs, and recovery after Iceberg commits before Postgres records the result. The stage test suite exercises the packaged job against the local emulator, REST catalog, and warehouse. Stage is implemented and audited locally. Merged in PR #3 as e921316. Curated outputs and DAG wiring are later merge requests.

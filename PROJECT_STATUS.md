@@ -4,11 +4,11 @@ Cold start, in this order: [ARCHITECTURE.md](ARCHITECTURE.md), this file, `PLAN.
 
 Objective: local World Bank pipeline at `world-bank-poc`. `make demo` becomes the clean-checkout command in the production-note MR. All cloud calls stay on the AWS emulator at `https://127.0.0.1:9297`.
 
-Branch: `feat/stage`, from `main` at `af1b325`. Platform and ingest are merged.
+Branch: `feat/consumer`, from `main` at `e921316`. Platform, ingest, and stage are merged.
 
-Current wave: standalone Iceberg SCD2 and snapshot recovery. The [stage contract](IMPLEMENTATION_CONTRACT.md#wave-stage--standalone-iceberg-scd2-and-snapshot-recovery) passed the acceptance gate. The stage job validates completed raw inputs, commits changed versions, and records the original snapshot IDs even when retry follows a later Iceberg commit. The Auditor passed focused rereview after correction attempt 1 made every expected raw request mandatory. The implementation and review are complete on local `feat/stage`, awaiting user review before consumer starts.
+Current wave: Postgres consumer. Load exact historical Iceberg snapshots into `stg`, retain provenance, and make a same-ID retry atomic. Contract Acceptance Gate: **Accepted for Machinist**. See [Exact Iceberg commit load into Postgres](IMPLEMENTATION_CONTRACT.md#wave-consumer--exact-iceberg-commit-load-into-postgres).
 
-Validation: `make test` built both job images and passed six ingest and five stage offline unit tests, plus both local integration scenarios. Stage verified Iceberg day partitioning, unchanged runs with no files or snapshots added, older replay and resume, omitted keys, null transitions, exact recovery after commit, and raw-input rejection with CloudWatch and SNS. Compose configuration, `make -n test-spike`, and whitespace checks passed. Stage unit-only coverage was 33% and is report-only. The README documents stage invocation and the local suite. No architecture or decision changes were needed.
+Validation: `make test` passed 15 offline unit tests and all three local integration scenarios. The consumer integration verified exact historical loads, lossless decimals, reprocess and zero-change completion, missing-snapshot rejection, and rollback of a failed replacement. Compose configuration, the spike target dry run, and whitespace checks passed. The Auditor passed the consumer scope on the first review.
 
 Wave list:
 
@@ -16,8 +16,8 @@ Wave list:
 |---|---|---|
 | platform | feature | done, merged to main |
 | ingest | feature | done, merged to main |
-| stage | feature | implemented and audited, awaiting user review |
-| consumer | feature | pending |
+| stage | feature | done, merged to main |
+| consumer | feature | implemented and audited, awaiting user review |
 | curated | feature | pending |
 | world_bank_pipeline | feature | pending |
 | world_bank_backfill | feature | pending |
@@ -27,4 +27,4 @@ Wave list:
 
 Open decisions: none. See `QUESTIONS_AND_DECISIONS.md`.
 
-Implementation blockers: none. User review is the checkpoint before consumer.
+Implementation blockers: none. User review is the checkpoint before curated tables.

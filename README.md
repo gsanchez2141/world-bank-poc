@@ -47,3 +47,21 @@ Repeat the same command to resume an interrupted stage run. Inspect its run log 
 ```
 
 `make test-unit` runs ingest and stage offline unit tests. `make test` additionally runs both integrations against the local emulator, warehouse and Iceberg REST catalog.
+
+## Consumer
+
+A completed stage commit can be loaded into Postgres staging with:
+
+```sh
+docker compose -f compose.infra.yaml -f compose.jobs.yaml build lakehouse-consumer-postgres
+export WORLD_BANK_ALERT_TOPIC_ARN="$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn)"
+docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm --no-deps lakehouse-consumer-postgres --ingestion-id local-extract
+```
+
+Retry the same command to replace the invocation's staging rows atomically. Read its logs with:
+
+```sh
+./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
+```
+
+`make test-unit` runs the ingest, stage and consumer unit suites. `make test` also runs their local integration fixtures.

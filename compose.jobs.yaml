@@ -42,3 +42,15 @@ services:
       WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
     volumes:
       - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
+
+  lakehouse-consumer-postgres:
+    build:
+      context: .
+      dockerfile: images/consumer-postgres/Dockerfile
+    image: lakehouse-consumer-postgres
+    profiles: ["manual"]
+    network_mode: service:aws-emulator
+    environment:
+      WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
+    volumes:
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
