@@ -1,14 +1,31 @@
 # world-bank-poc
 
-Local platform for the World Bank lakehouse proof of concept. The agreed design is [ARCHITECTURE.md](ARCHITECTURE.md). AWS calls stay on the emulator at `https://127.0.0.1:9297`. This checkout does not call AWS or the World Bank API.
+A local World Bank lakehouse. The agreed design is in [ARCHITECTURE.md](ARCHITECTURE.md). AWS calls use the local emulator at `https://127.0.0.1:9297`.
 
-## Local platform
+## Platform
 
-From this merge request:
+Run `make platform` to start the stack and apply Terraform. `make down` stops it while retaining the Postgres volume. `make test-spike` runs the Iceberg and dbt spikes. `make run` and `make demo` become available when the pipeline DAG is added.
 
-1. `make platform` starts the emulator, Postgres, the Iceberg REST catalog, and Airflow with an empty DAG folder. It builds the `dbt-postgres` image and applies the dev Terraform stack to the emulator.
-2. `make test` prints `test suites are not in this MR` and exits 0. It does not run a test suite, and it does not call the emulator, dbt, or DuckDB.
-3. `make test-spike` runs the Iceberg SCD2 spike and the dbt spike. If the emulator or the warehouse is down, run `make platform` first.
-4. `make down` stops the stack and keeps the Postgres volume.
+## Ingest
 
-`make demo` is not the clean-checkout command in this MR. `make demo` and `make run` exit with an error because the pipeline DAG is not in this MR.
+With the platform running, build and run the standalone image:
+
+```sh
+docker compose -f compose.infra.yaml -f compose.jobs.yaml build lakehouse-ingest-world-bank
+export WORLD_BANK_ALERT_TOPIC_ARN="$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn)"
+docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm lakehouse-ingest-world-bank --ingestion-id local-extract --countries BRA --indicators SP.POP.TOTL --start-year 2020 --end-year 2021
+```
+
+The defaults are in `config/pipeline.yml`. A failed run exits nonzero and can be retried with the same ID and scope. Each retry preserves the earlier attempt. Replay an already completed extract without contacting the API:
+
+```sh
+docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm lakehouse-ingest-world-bank --ingestion-id local-replay --mode replay --source-ingestion-id local-extract
+```
+
+Read its run log with:
+
+```sh
+./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-ingest-world-bank --log-stream-names local-extract
+```
+
+`make test-unit` runs isolated unit tests. `make test` also runs fixture integration tests against the provisioned local emulator and warehouse.

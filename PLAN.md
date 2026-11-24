@@ -8,7 +8,7 @@ The platform is on `main`. Merge requests stay separate. The user reviews each M
 
 ## Now
 
-Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at most 100 rows, attempt prefixes, the raw manifest, CloudWatch logs for that image, and the ingest tests. `make test` runs those tests. This MR has no DAG.
+Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at most 100 rows, attempt prefixes, the raw manifest, CloudWatch logs for that image, and the ingest tests. `make test` runs those tests. This MR has no DAG. The ingest image and its tests are implemented and audited locally. Ingest awaits user review before stage begins.
 
 ## Next
 

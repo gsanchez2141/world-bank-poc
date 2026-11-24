@@ -1,0 +1,9 @@
+.git
+.handoff
+**/.handoff
+secrets
+infra/terraform/.terraform
+infra/terraform/*.tfstate*
+**/.venv
+**/__pycache__
+**/coverage
