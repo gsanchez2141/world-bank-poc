@@ -27,4 +27,7 @@ if [ ! -f "$AWS_CA_BUNDLE" ]; then
   exit 1
 fi
 
+# Terraform lives in ~/.local/bin. This lasts only for the exec'd command.
+export PATH="${HOME}/.local/bin:${PATH}"
+
 exec "$@"
