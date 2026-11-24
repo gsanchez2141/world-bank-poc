@@ -28,7 +28,6 @@ Read its run log with:
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-ingest-world-bank --log-stream-names local-extract
 ```
 
-`make test-unit` runs isolated unit tests. `make test` also runs fixture integration tests against the provisioned local emulator and warehouse.
 
 ## Stage
 
@@ -46,7 +45,6 @@ Repeat the same command to resume an interrupted stage run. Inspect its run log 
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-stage-world-bank --log-stream-names local-extract
 ```
 
-`make test-unit` runs ingest and stage offline unit tests. `make test` additionally runs both integrations against the local emulator, warehouse and Iceberg REST catalog.
 
 ## Consumer
 
@@ -64,4 +62,22 @@ Retry the same command to resume an unfinished staging load. A completed load re
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
 ```
 
-`make test-unit` runs the ingest, stage and consumer unit suites. `make test` also runs their local integration fixtures.
+`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, or `make test curated`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
+
+## Curated star
+
+After a completed consumer load, build and publish the curated star and native dbt catalog:
+
+```sh
+docker compose -f compose.infra.yaml -f compose.jobs.yaml build dbt-postgres
+export WORLD_BANK_ALERT_TOPIC_ARN="$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn)"
+docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm --no-deps dbt-postgres --ingestion-id local-extract
+```
+
+A failed run can be retried with the same ID without rerunning the consumer. The native manifest and catalog are written under `s3://lakehouse-curated/world-bank/dbt_catalog/date={stage-day}/ingestion_id={id}/`. Read the job log with:
+
+```sh
+./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/dbt-postgres --log-stream-names local-extract
+```
+
+`make test curated` runs the curated unit and integration suites. `make test` runs all four installed suites. `make test-unit` runs their offline units.

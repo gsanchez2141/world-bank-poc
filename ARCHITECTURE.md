@@ -45,7 +45,7 @@ Buckets: `lakehouse-raw`, `lakehouse-stage`, `lakehouse-curated`. SNS topic: `wo
 
 `make platform` starts the stack, builds `dbt-postgres`, and applies dev Terraform. `scripts/emulator-env.sh` points Terraform and the AWS CLI at the emulator and prepends `~/.local/bin` for that process only. `make down` stops the stack and keeps the Postgres volume. Emulator objects live until the emulator container stops.
 
-The platform spikes already passed. DuckDB 2.0.1 commits an SCD2 close and insert as two snapshots, overwrite then append. dbt 2.0.12 passed `run`, `test`, `compile --static-analysis baseline`, and `docs generate`. A later failure of that adapter stops for a decision. The image is not switched to dbt Core 1.x inside a wave.
+The platform spikes already passed. DuckDB 2.0.1 commits an SCD2 close and insert as two snapshots, overwrite then append. The initial dbt Fusion 2.0.12 spike passed. The curated probe later reproduced a panic during strict Postgres schema discovery (`list_relations_schemas`). Fusion wrote `catalog.json` with `--write-catalog` after the warehouse metadata query failed near `None`. The project uses dbt Core 1.12.7 with dbt-postgres 1.11.0. Its local probe built and tested both models and generated a populated catalog without errors.
 
 ## Email
 
@@ -197,7 +197,7 @@ erDiagram
   }
 ```
 
-`schema.yml` documents every column, `persist_docs` writes them to Postgres, and column-level lineage comes from the static-analysis compile. `dbt docs generate` publishes `manifest.json` and `catalog.json` under `s3://lakehouse-curated/world-bank/dbt_catalog/date={day}/ingestion_id={run}/`.
+`schema.yml` documents every column, `persist_docs` writes them to Postgres, and the native manifest records model-level lineage. The curated deliverable uses dbt Core’s native artifacts. `dbt docs generate` publishes `manifest.json` and `catalog.json` under `s3://lakehouse-curated/world-bank/dbt_catalog/date={day}/ingestion_id={run}/`.
 
 Every successful run rewrites the reporting Parquet and CSV. `exports/` gets the same CSVs.
 
@@ -280,7 +280,7 @@ Acceptance, on saved responses:
 |---|---|
 | `make platform` | Infra, `dbt-postgres` image, Terraform on the emulator |
 | `make test` | Unit and integration tests for the merge request that added them. On the platform merge request it prints that the suites are not in that MR and exits 0 |
-| `make test-spike` | Iceberg SCD2 spike and dbt 2.0.12 spike |
+| `make test-spike` | Iceberg SCD2 spike and dbt Core Postgres spike |
 | `make run` | Trigger `world_bank_pipeline` and wait. Not available until that DAG exists |
 | `make demo` | Platform, then run, then print the CSV paths. Nonzero when the DAG run failed. Documented as the clean-checkout command in the production note |
 | `make down` | Stop the stack and keep the Postgres volume |
@@ -291,7 +291,7 @@ Acceptance, on saved responses:
 2. **Ingest.** `lakehouse-ingest-world-bank`, responses, batches, attempts, logs, and its tests. No DAG.
 3. **Stage.** `lakehouse-stage-world-bank`, SCD2, both snapshot ids, and its tests.
 4. **Consumer.** `lakehouse-consumer-postgres`, including the crash after the Iceberg commit.
-5. **Curated tables.** Surrogate keys, provenance, static-analysis lineage, published catalog.
+5. **Curated tables.** Surrogate keys, provenance, model-level lineage, published catalog.
 6. **`world_bank_pipeline`.** The writer DAG, failure publish, and `make run`.
 7. **`world_bank_backfill`.** Trigger-and-wait for the four modes.
 8. **Analytic outputs.** The four views, including the three missingness reasons, and the export on every success.

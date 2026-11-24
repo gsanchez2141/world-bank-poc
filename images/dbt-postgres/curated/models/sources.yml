@@ -1,0 +1,13 @@
+version: 2
+sources:
+  - name: stg
+    schema: stg
+    tables:
+      - name: observation
+      - name: country
+      - name: indicator
+      - name: income_level
+  - name: meta
+    schema: meta
+    tables:
+      - name: pipeline_run

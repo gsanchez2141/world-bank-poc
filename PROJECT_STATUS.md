@@ -4,13 +4,11 @@ Cold start, in this order: [ARCHITECTURE.md](ARCHITECTURE.md), this file, `PLAN.
 
 Objective: local World Bank pipeline at `world-bank-poc`. `make demo` becomes the clean-checkout command in the production-note MR. All cloud calls stay on the AWS emulator at `https://127.0.0.1:9297`.
 
-Branch: `feat/consumer`, from `main` at `e921316`. Platform, ingest, and stage are merged.
+Branch: `feat/curated`, from `main` at `705efe0`. Platform, ingest, stage, and consumer are merged.
 
-Current wave: Postgres consumer. Load exact historical Iceberg snapshots into `stg`, retain provenance, and make a same-ID retry atomic. Contract Acceptance Gate: **Accepted for Machinist**. See [Exact Iceberg commit load into Postgres](IMPLEMENTATION_CONTRACT.md#wave-consumer--exact-iceberg-commit-load-into-postgres).
+Current wave: curated tables. Build the dbt star from consumer staging, retain provenance, and publish catalog artifacts. The user selected dbt Core 1.12.7 with native model-level lineage and catalog. Contract Acceptance Gate: **Accepted for Machinist** for [Core Postgres star and native dbt catalog](IMPLEMENTATION_CONTRACT.md#wave-curated--core-postgres-star-and-native-dbt-catalog). The independent test suite selection task was accepted, implemented and passed Auditor review. All three named installed suites and the aggregate passed against the local stack. The curated selector now runs the real curated unit and integration suites.
 
-Validation: `make test` passed 15 offline unit tests and all three local integration scenarios. The consumer integration verified exact historical loads, lossless decimals, reprocess and zero-change completion, missing-snapshot rejection, and rollback of a failed replacement. Compose configuration, the spike target dry run, and whitespace checks passed. The Auditor passed the consumer scope on the first review.
-
-The user approved a narrow follow-up to skip completed same-ID consumer retries. The focused implementation and Auditor review passed for [Return immediately for a completed load](IMPLEMENTATION_CONTRACT.md#task-consumer-completed-retry--return-immediately-for-a-completed-load). The packaged integration verified that an already-complete retry succeeds with an unavailable snapshot and staging writes guarded. An unfinished retry and distinct reprocess remain covered.
+Validation: `make test curated`, the full `make test` (21 unit tests and four local integrations), and both platform spikes passed. The Auditor passed the curated scope with no blockers. The curated wave awaits user review before DAG wiring.
 
 Wave list:
 
@@ -19,8 +17,8 @@ Wave list:
 | platform | feature | done, merged to main |
 | ingest | feature | done, merged to main |
 | stage | feature | done, merged to main |
-| consumer | feature | implemented and audited, awaiting user review |
-| curated | feature | pending |
+| consumer | feature | done, merged to main |
+| curated | feature | implemented and audited, awaiting user review |
 | world_bank_pipeline | feature | pending |
 | world_bank_backfill | feature | pending |
 | analytic outputs | feature | pending |
@@ -29,4 +27,4 @@ Wave list:
 
 Open decisions: none. See `QUESTIONS_AND_DECISIONS.md`.
 
-Implementation blockers: none. User review is the checkpoint before curated tables.
+Curated capability: the dbt Core 1.12.7 and dbt-postgres 1.11.0 probe passed the model build and generated an error-free catalog. The Fusion 2.0.12 strict-analysis and catalog failures are recorded in ARCHITECTURE.md.

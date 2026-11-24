@@ -3,11 +3,15 @@ name: world-bank
 services:
   dbt-postgres:
     build:
-      context: ./images/dbt-postgres
+      context: .
+      dockerfile: images/dbt-postgres/Dockerfile
     image: dbt-postgres
     profiles: ["manual"]
+    network_mode: service:aws-emulator
     environment:
-      DBT_ALLOW_EXPERIMENTAL_ADAPTERS: "1"
+      WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
+    volumes:
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
 
   iceberg-spike:
     build:

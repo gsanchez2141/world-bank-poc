@@ -25,3 +25,7 @@ Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at
 Stage. The `lakehouse-stage-world-bank` image reads completed raw extracts and replay selections, validates lineage, and records changed versions in the four Iceberg tables. It publishes the snapshot IDs and changed count needed by the consumer. A retry reconciles a committed snapshot without writing another version.
 
 Acceptance on saved responses covers initial stage, an unchanged rerun, historical corrections, numeric-to-null and null-to-numeric transitions, omitted keys, older replays and resumes, malformed raw inputs, and recovery after Iceberg commits before Postgres records the result. The stage test suite exercises the packaged job against the local emulator, REST catalog, and warehouse. Stage is implemented and audited locally. Merged in PR #3 as e921316. Curated outputs and DAG wiring are later merge requests.
+
+## Consumer
+
+Consumer. Load the exact completed stage snapshots into Postgres `stg`, preserving provenance. A retry replaces rows for that ingestion ID atomically. An unchanged stage run completes without inserting rows. The local suite verified recovery after Iceberg commits and atomic warehouse rollback. Merged in PR #4 as 705efe0.
