@@ -4,19 +4,19 @@ Cold start, in this order: [ARCHITECTURE.md](ARCHITECTURE.md), this file, `PLAN.
 
 Objective: local World Bank pipeline at `world-bank-poc`. `make demo` becomes the clean-checkout command in the production-note MR. All cloud calls stay on the AWS emulator at `https://127.0.0.1:9297`.
 
-Branch: `feat/ingest`, from `main` at `9cf28c8`. Platform is merged.
+Branch: `feat/stage`, from `main` at `af1b325`. Platform and ingest are merged.
 
-Current wave: standalone World Bank raw ingestion. Implementation and review are complete. The image fetches or replays raw responses, publishes traceable batches and manifests, and reports run outcomes. The [ingest contract](IMPLEMENTATION_CONTRACT.md#wave-ingest--standalone-world-bank-raw-ingestion) was accepted, and the Auditor passed the focused rereview after correction attempt 1 restored independent SNS notification when CloudWatch stream creation fails. The reviewed changes are on local `feat/ingest`, awaiting user review before stage starts.
+Current wave: standalone Iceberg SCD2 and snapshot recovery. The [stage contract](IMPLEMENTATION_CONTRACT.md#wave-stage--standalone-iceberg-scd2-and-snapshot-recovery) passed the acceptance gate. The stage job validates completed raw inputs, commits changed versions, and records the original snapshot IDs even when retry follows a later Iceberg commit. The Auditor passed focused rereview after correction attempt 1 made every expected raw request mandatory. The implementation and review are complete on local `feat/stage`, awaiting user review before consumer starts.
 
-Validation: `make test` built the image and passed six offline unit tests and the local Postgres/AWS emulator integration scenario covering failure, retry, repeat, replay, log retrieval, and SNS acknowledgement. Compose config, `make -n test-spike`, and whitespace checks passed. The tests used saved World Bank responses. Unit-only coverage was 53% and is report-only. The README documents operation and replaces the platform-only test instructions. No contract or decision changes were needed after implementation.
+Validation: `make test` built both job images and passed six ingest and five stage offline unit tests, plus both local integration scenarios. Stage verified Iceberg day partitioning, unchanged runs with no files or snapshots added, older replay and resume, omitted keys, null transitions, exact recovery after commit, and raw-input rejection with CloudWatch and SNS. Compose configuration, `make -n test-spike`, and whitespace checks passed. Stage unit-only coverage was 33% and is report-only. The README documents stage invocation and the local suite. No architecture or decision changes were needed.
 
 Wave list:
 
 | Wave | Type | Status |
 |---|---|---|
 | platform | feature | done, merged to main |
-| ingest | feature | implemented and audited, awaiting user review |
-| stage | feature | pending |
+| ingest | feature | done, merged to main |
+| stage | feature | implemented and audited, awaiting user review |
 | consumer | feature | pending |
 | curated | feature | pending |
 | world_bank_pipeline | feature | pending |
@@ -27,4 +27,4 @@ Wave list:
 
 Open decisions: none. See `QUESTIONS_AND_DECISIONS.md`.
 
-Implementation blockers: none. User review is the checkpoint before stage.
+Implementation blockers: none. User review is the checkpoint before consumer.
