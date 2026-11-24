@@ -1,0 +1,22 @@
+.DS_Store
+
+# Terraform local state, plans, and environment tfvars. The lock file stays tracked.
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/crash.log
+infra/terraform/crash.*.log
+*.tfvars
+*.tfvars.json
+*.tfplan
+
+# The alert key stays on the machine. Ciphertext may be committed.
+secrets/email.key
+
+# Wave handoff carriers.
+.handoff/
+
+# Spike and dbt build output, if a command writes it on the host.
+**/target/
+*.duckdb
+.spike-container.sh

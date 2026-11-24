@@ -1,0 +1,42 @@
+.PHONY: platform test test-spike down demo run
+
+COMPOSE_INFRA = docker compose -f compose.infra.yaml
+COMPOSE_ALL = docker compose -f compose.infra.yaml -f compose.jobs.yaml
+
+platform:
+	@$(COMPOSE_INFRA) up -d --build --wait || { echo "error: health check failed" >&2; exit 1; }
+	@echo "healthy"
+	@$(COMPOSE_ALL) build dbt-postgres
+	@if grep -E 'https://[^[:space:]"]+' infra/terraform/providers.tf | grep -v 'https://127.0.0.1:9297'; then \
+		echo "error: provider endpoints are not all https://127.0.0.1:9297" >&2; \
+		exit 1; \
+	fi
+	@./scripts/emulator-env.sh terraform -chdir=infra/terraform init -input=false
+	@./scripts/emulator-env.sh terraform -chdir=infra/terraform apply -input=false -auto-approve
+	@echo "apply finished"
+	@./scripts/emulator-env.sh ./scripts/prove-topic.sh
+	@./scripts/emulator-env.sh ./scripts/email-subscribe.sh
+
+test:
+	@echo "test suites are not in this MR"
+
+test-spike:
+	@health=$$(curl -sf --cacert "$(HOME)/.aws/emulator/9297/ca.pem" https://127.0.0.1:9297/__admin/health || true); \
+	case "$$health" in \
+		ok|ok*) ;; \
+		*) echo "error: emulator is not healthy; run make platform" >&2; exit 1 ;; \
+	esac
+	@$(COMPOSE_INFRA) exec -T postgres pg_isready -U postgres -d warehouse >/dev/null \
+		|| { echo "error: warehouse is down; run make platform" >&2; exit 1; }
+	@$(COMPOSE_ALL) build iceberg-spike
+	@./spikes/iceberg/run.sh
+	@$(COMPOSE_ALL) run --rm --entrypoint /bin/sh \
+		-v "$(CURDIR)/spikes/dbt/run.sh:/opt/spike/run.sh:ro" \
+		dbt-postgres /opt/spike/run.sh
+
+down:
+	@$(COMPOSE_INFRA) down
+
+demo run:
+	@echo "pipeline DAG is not in this MR" >&2
+	@exit 1
