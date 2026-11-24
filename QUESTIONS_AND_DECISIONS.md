@@ -6,7 +6,7 @@ No open questions.
 
 ## Decided
 
-- Warehouse is Postgres. dbt 2.0.12 is tried first. dbt Core 1.x is the fallback if the Postgres adapter fails the platform spike.
+- Warehouse is Postgres. Curated uses dbt Core 1.12.7 and dbt-postgres 1.11.0 with native model-level lineage, manifest, and catalog. The Fusion 2.0.12 strict-analysis panic and catalog metadata error are recorded in the architecture.
 - Images: `lakehouse-ingest-world-bank`, `lakehouse-stage-world-bank`, `lakehouse-consumer-postgres`, `dbt-postgres`.
 - One writer DAG, `world_bank_pipeline`, `max_active_runs=1`. `world_bank_backfill` only triggers it.
 - No `meta.pipeline_lock`. No `meta.observation_coverage`.

@@ -1,0 +1,124 @@
+version: 2
+models:
+  - name: dim_income_level
+    description: "Current income classifications."
+    columns:
+      - name: income_level_sk
+        description: "Stable income classification key."
+        data_tests:
+          - unique
+          - not_null
+      - name: income_level_id
+        description: "World Bank income classification identifier."
+        data_tests:
+          - unique
+          - not_null
+      - name: income_level_name
+        description: "Income classification name."
+  - name: dim_country
+    description: "Current country classifications; the API does not provide the classification as of 2018."
+    columns:
+      - name: country_sk
+        description: "Stable country key."
+        data_tests:
+          - unique
+          - not_null
+      - name: country_iso3
+        description: "Country ISO3 code."
+        data_tests:
+          - unique
+          - not_null
+      - name: country_name
+        description: "Country name."
+      - name: income_level_sk
+        description: "Current income classification key."
+        data_tests:
+          - relationships:
+              to: ref('dim_income_level')
+              field: income_level_sk
+  - name: dim_indicator
+    description: "World Bank indicators."
+    columns:
+      - name: indicator_sk
+        description: "Stable indicator key."
+        data_tests:
+          - unique
+          - not_null
+      - name: indicator_code
+        description: "World Bank indicator code."
+        data_tests:
+          - unique
+          - not_null
+      - name: indicator_name
+        description: "Indicator name."
+  - name: dim_year
+    description: "Observed and requested calendar years."
+    columns:
+      - name: year_sk
+        description: "Stable calendar year key."
+        data_tests:
+          - unique
+          - not_null
+      - name: year
+        description: "Calendar year."
+        data_tests:
+          - unique
+          - not_null
+  - name: fact_indicator_year
+    description: "Latest received observation per country, indicator and year."
+    columns:
+      - name: country_sk
+        description: "Stable country key."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_country')
+              field: country_sk
+      - name: indicator_sk
+        description: "Stable indicator key."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_indicator')
+              field: indicator_sk
+      - name: year_sk
+        description: "Stable calendar year key."
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_year')
+              field: year_sk
+      - name: value
+        description: "Latest received measurement, including source null."
+      - name: raw_response_key
+        description: "Stored response object key."
+        data_tests:
+          - not_null
+      - name: raw_record_index
+        description: "Zero-based record index in the response."
+        data_tests:
+          - not_null
+      - name: response_sha256
+        description: "SHA-256 of the stored response body."
+        data_tests:
+          - not_null
+      - name: raw_object_key
+        description: "Stored raw batch object key."
+        data_tests:
+          - not_null
+      - name: source_url
+        description: "Original source request URL."
+        data_tests:
+          - not_null
+      - name: api_page
+        description: "Source response page number."
+        data_tests:
+          - not_null
+      - name: raw_ingested_at
+        description: "UTC time the raw response was stored."
+        data_tests:
+          - not_null
+      - name: ingestion_id
+        description: "Original raw extract identifier."
+        data_tests:
+          - not_null

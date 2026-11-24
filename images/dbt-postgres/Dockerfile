@@ -1,29 +1,22 @@
-# dbt 2.0.12 official Linux binary. Do not replace this pin with dbt Core 1.x.
-FROM debian:bookworm-slim
+FROM python:3.12-slim
 
-ARG DBT_VERSION=2.0.12
+RUN pip install --no-cache-dir dbt-core==1.12.7 dbt-postgres==1.11.0 \
+    && dbt --version
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates curl libpq5 tar gzip \
-    && rm -rf /var/lib/apt/lists/* \
-    && case "$(uname -m)" in \
-         aarch64|arm64) arch=aarch64 ;; \
-         x86_64|amd64) arch=x86_64 ;; \
-         *) echo "unsupported architecture $(uname -m)" >&2; exit 1 ;; \
-       esac \
-    && mkdir -p /tmp/dbt-extract \
-    && curl -fsSL -o /tmp/dbt.tar.gz \
-         "https://public.cdn.getdbt.com/fs/cli/fs-v${DBT_VERSION}-${arch}-unknown-linux-gnu.tar.gz" \
-    && tar -xzf /tmp/dbt.tar.gz -C /tmp/dbt-extract \
-    && install "$(find /tmp/dbt-extract -type f -name dbt | head -n 1)" /usr/local/bin/dbt \
-    && rm -rf /tmp/dbt-extract /tmp/dbt.tar.gz \
-    && dbt --version | grep -q "${DBT_VERSION}"
-
-ENV DBT_ALLOW_EXPERIMENTAL_ADAPTERS=1 \
-    DBT_PROFILES_DIR=/usr/app \
+ENV DBT_PROFILES_DIR=/usr/app \
     DBT_SEND_ANONYMOUS_USAGE_STATS=false \
-    DO_NOT_TRACK=1
+    DO_NOT_TRACK=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /usr/app
-COPY dbt_project.yml profiles.yml ./
-COPY models ./models
+COPY images/ingest-world-bank/requirements.txt /tmp/ingest-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/ingest-requirements.txt
+COPY images/ingest-world-bank/world_bank_ingest ./world_bank_ingest
+COPY images/ingest-world-bank/world_bank_ingest/pipeline_run.sql ./fixture/pipeline_run.sql
+COPY images/consumer-postgres/world_bank_consumer/staging.sql ./fixture/staging.sql
+COPY images/dbt-postgres/dbt_project.yml images/dbt-postgres/profiles.yml ./
+COPY images/dbt-postgres/models ./models
+COPY images/dbt-postgres/curated ./curated
+COPY images/dbt-postgres/world_bank_curated ./world_bank_curated
+COPY images/dbt-postgres/tests ./curated_tests
+ENTRYPOINT ["python", "-m", "world_bank_curated"]
