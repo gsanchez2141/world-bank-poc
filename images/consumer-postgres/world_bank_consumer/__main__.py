@@ -39,6 +39,9 @@ def process(args):
         if not invocation:
             raise ValueError("consumer run not found")
         accepted = True
+        if invocation["consumer_status"] == "complete":
+            print(json.dumps(reporter.event("INFO", "consumer_already_complete")))
+            return 0
         source = select_source(runs, invocation)
         changes = read_changes(source, lambda: Catalog(selected_namespace))
         runs.replace(changes)

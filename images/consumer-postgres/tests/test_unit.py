@@ -1,9 +1,13 @@
 from datetime import datetime, timezone
+from contextlib import redirect_stdout
+import argparse
+import io
+import os
 from decimal import Decimal
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
-from world_bank_consumer import snapshots
+from world_bank_consumer import __main__ as cli, snapshots
 from world_bank_consumer.__main__ import select_source
 from world_bank_stage.iceberg import fields
 
@@ -46,6 +50,29 @@ class FakeCatalog:
 
 
 class ConsumerUnit(unittest.TestCase):
+    def test_completed_run_does_not_select_or_replace(self):
+        runs = Mock()
+        runs.get.return_value = {"consumer_status": "complete"}
+        reporter = Mock()
+        reporter.event.return_value = {"event": "consumer_already_complete"}
+        output = io.StringIO()
+        with patch.object(cli, "namespace", return_value="world_bank"), \
+             patch.object(cli, "clients", return_value=(Mock(), Mock(), Mock())), \
+             patch.object(cli, "Reporter", return_value=reporter), \
+             patch.object(cli, "ConsumerRuns", return_value=runs), \
+             patch.object(cli, "select_source") as select, \
+             patch.object(cli, "read_changes") as read, \
+             patch.dict(os.environ, {"WORLD_BANK_ALERT_TOPIC_ARN": "local"}), \
+             redirect_stdout(output):
+            self.assertEqual(cli.process(argparse.Namespace(ingestion_id="complete")), 0)
+        runs.get.assert_called_once_with("complete")
+        runs.replace.assert_not_called()
+        runs.fail.assert_not_called()
+        runs.close.assert_called_once()
+        select.assert_not_called()
+        read.assert_not_called()
+        self.assertIn("consumer_already_complete", output.getvalue())
+
     def test_zero_skips_catalog(self):
         factory = Mock()
         self.assertEqual(snapshots.read_changes(source(), factory), {name: [] for name in snapshots.TABLES})

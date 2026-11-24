@@ -10,6 +10,8 @@ Current wave: Postgres consumer. Load exact historical Iceberg snapshots into `s
 
 Validation: `make test` passed 15 offline unit tests and all three local integration scenarios. The consumer integration verified exact historical loads, lossless decimals, reprocess and zero-change completion, missing-snapshot rejection, and rollback of a failed replacement. Compose configuration, the spike target dry run, and whitespace checks passed. The Auditor passed the consumer scope on the first review.
 
+The user approved a narrow follow-up to skip completed same-ID consumer retries. The focused implementation and Auditor review passed for [Return immediately for a completed load](IMPLEMENTATION_CONTRACT.md#task-consumer-completed-retry--return-immediately-for-a-completed-load). The packaged integration verified that an already-complete retry succeeds with an unavailable snapshot and staging writes guarded. An unfinished retry and distinct reprocess remain covered.
+
 Wave list:
 
 | Wave | Type | Status |

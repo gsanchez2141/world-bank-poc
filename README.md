@@ -58,7 +58,7 @@ export WORLD_BANK_ALERT_TOPIC_ARN="$(./scripts/emulator-env.sh terraform -chdir=
 docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm --no-deps lakehouse-consumer-postgres --ingestion-id local-extract
 ```
 
-Retry the same command to replace the invocation's staging rows atomically. Read its logs with:
+Retry the same command to resume an unfinished staging load. A completed load returns immediately. Use a distinct reprocess invocation to reload a commit. Read its logs with:
 
 ```sh
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
