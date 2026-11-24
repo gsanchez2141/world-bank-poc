@@ -18,3 +18,15 @@ services:
     volumes:
       - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
       - ./spikes/iceberg/scd2.sql:/opt/spike/scd2.sql:ro
+
+  lakehouse-ingest-world-bank:
+    build:
+      context: .
+      dockerfile: images/ingest-world-bank/Dockerfile
+    image: lakehouse-ingest-world-bank
+    profiles: ["manual"]
+    network_mode: service:aws-emulator
+    environment:
+      WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
+    volumes:
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro

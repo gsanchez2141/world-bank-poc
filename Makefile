@@ -1,4 +1,4 @@
-.PHONY: platform test test-spike down demo run
+.PHONY: platform test test-unit test-spike down demo run
 
 COMPOSE_INFRA = docker compose -f compose.infra.yaml
 COMPOSE_ALL = docker compose -f compose.infra.yaml -f compose.jobs.yaml
@@ -17,8 +17,13 @@ platform:
 	@./scripts/emulator-env.sh ./scripts/prove-topic.sh
 	@./scripts/emulator-env.sh ./scripts/email-subscribe.sh
 
-test:
-	@echo "test suites are not in this MR"
+test-unit:
+	@$(COMPOSE_ALL) build lakehouse-ingest-world-bank
+	@docker run --rm --network none --entrypoint /bin/sh lakehouse-ingest-world-bank -c "coverage run --source=world_bank_ingest -m unittest discover -s tests -p test_unit.py && coverage report -m"
+
+test: test-unit
+	@WORLD_BANK_ALERT_TOPIC_ARN=$$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn) \
+		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python lakehouse-ingest-world-bank -m unittest discover -s tests -p test_integration.py
 
 test-spike:
 	@health=$$(curl -sf --cacert "$(HOME)/.aws/emulator/9297/ca.pem" https://127.0.0.1:9297/__admin/health || true); \
