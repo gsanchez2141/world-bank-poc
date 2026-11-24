@@ -1,0 +1,118 @@
+name: world-bank
+
+services:
+  aws-emulator:
+    build: ./infra/aws-emulator
+    image: aws-emulator
+    environment:
+      HOME: ${HOME}
+      EMULATOR_BIND_ADDRESS: 0.0.0.0
+    volumes:
+      - ${HOME}/.aws/emulator:${HOME}/.aws/emulator
+    mem_limit: 2g
+    memswap_limit: 2g
+    ports:
+      - "127.0.0.1:9297:9297"
+      - "127.0.0.1:8181:8181"
+    command: ["-p", "9297"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf --cacert $$HOME/.aws/emulator/9297/ca.pem https://127.0.0.1:9297/__admin/health | grep -qx ok"]
+      interval: 2s
+      timeout: 5s
+      retries: 40
+      start_period: 3s
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 3s
+
+  iceberg-rest:
+    build: ./infra/iceberg-rest
+    image: iceberg-rest
+    network_mode: service:aws-emulator
+    depends_on:
+      aws-emulator:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      HOME: ${HOME}
+      CATALOG_CATALOG__IMPL: org.apache.iceberg.jdbc.JdbcCatalog
+      CATALOG_URI: jdbc:postgresql://postgres:5432/iceberg_catalog
+      CATALOG_JDBC_USER: postgres
+      CATALOG_JDBC_PASSWORD: postgres
+      CATALOG_WAREHOUSE: s3://lakehouse-stage/catalog
+      CATALOG_IO__IMPL: org.apache.iceberg.aws.s3.S3FileIO
+      CATALOG_S3_ENDPOINT: https://127.0.0.1:9297
+      CATALOG_S3_PATH__STYLE__ACCESS: "true"
+      CATALOG_CLIENT_REGION: us-east-1
+    volumes:
+      - ${HOME}/.aws/emulator:${HOME}/.aws/emulator:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8181/v1/config >/dev/null"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  airflow-webserver:
+    image: apache/airflow:2.10.5
+    environment: &airflow-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+      AIRFLOW__CORE__FERNET_KEY: "l-J6cg4XYpX2ZXl8BFXlSOzLfiLEdnfQcbwzSGxKZQE="
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
+      _AIRFLOW_DB_MIGRATE: "true"
+      _AIRFLOW_WWW_USER_CREATE: "true"
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+      _AIRFLOW_WWW_USER_EMAIL: airflow@localhost
+    command: webserver
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 18
+      start_period: 40s
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.5
+    environment:
+      <<: *airflow-env
+    command: scheduler
+    volumes:
+      - ./dags:/opt/airflow/dags:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-webserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 40s
+
+volumes:
+  postgres-data:

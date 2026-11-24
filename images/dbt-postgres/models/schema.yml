@@ -1,0 +1,9 @@
+version: 2
+
+models:
+  - name: spike_model
+    description: Platform spike model.
+    columns:
+      - name: id
+        data_tests:
+          - not_null

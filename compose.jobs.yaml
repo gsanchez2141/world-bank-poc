@@ -1,0 +1,20 @@
+name: world-bank
+
+services:
+  dbt-postgres:
+    build:
+      context: ./images/dbt-postgres
+    image: dbt-postgres
+    profiles: ["manual"]
+    environment:
+      DBT_ALLOW_EXPERIMENTAL_ADAPTERS: "1"
+
+  iceberg-spike:
+    build:
+      context: ./spikes/iceberg
+    image: iceberg-spike
+    profiles: ["manual"]
+    network_mode: service:aws-emulator
+    volumes:
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
+      - ./spikes/iceberg/scd2.sql:/opt/spike/scd2.sql:ro
