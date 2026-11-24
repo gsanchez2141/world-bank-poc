@@ -29,3 +29,21 @@ Read its run log with:
 ```
 
 `make test-unit` runs isolated unit tests. `make test` also runs fixture integration tests against the provisioned local emulator and warehouse.
+
+## Stage
+
+After a successful extract or replay, use its ingestion ID to create Iceberg versions:
+
+```sh
+docker compose -f compose.infra.yaml -f compose.jobs.yaml build lakehouse-stage-world-bank
+export WORLD_BANK_ALERT_TOPIC_ARN="$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn)"
+docker compose -f compose.infra.yaml -f compose.jobs.yaml run --rm lakehouse-stage-world-bank --ingestion-id local-extract
+```
+
+Repeat the same command to resume an interrupted stage run. Inspect its run log with:
+
+```sh
+./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-stage-world-bank --log-stream-names local-extract
+```
+
+`make test-unit` runs ingest and stage offline unit tests. `make test` additionally runs both integrations against the local emulator, warehouse and Iceberg REST catalog.

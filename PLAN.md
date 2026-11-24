@@ -4,15 +4,17 @@ Cold start reads [ARCHITECTURE.md](ARCHITECTURE.md) before this file. That docum
 
 One command from a clean checkout is `make demo`. No real AWS account, no paid resources, no push unless the user asks.
 
-The platform is on `main`. Merge requests stay separate. The user reviews each MR before the next one starts.
+The platform and ingest are on `main`. Merge requests stay separate. The user reviews each MR before the next one starts.
 
 ## Now
 
-Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at most 100 rows, attempt prefixes, the raw manifest, CloudWatch logs for that image, and the ingest tests. `make test` runs those tests. This MR has no DAG. The ingest image and its tests are implemented and audited locally. Ingest awaits user review before stage begins.
+Stage. The `lakehouse-stage-world-bank` image reads completed raw extracts and replay selections, validates lineage, and records changed versions in the four Iceberg tables. It publishes the snapshot IDs and changed count needed by the consumer. A retry reconciles a committed snapshot without writing another version.
+
+Acceptance on saved responses covers initial stage, an unchanged rerun, historical corrections, numeric-to-null and null-to-numeric transitions, omitted keys, older replays and resumes, malformed raw inputs, and recovery after Iceberg commits before Postgres records the result. The stage test suite exercises the packaged job against the local emulator, REST catalog, and warehouse. Stage is implemented and audited locally. It awaits user review before consumer begins. Curated outputs and DAG wiring are later merge requests.
 
 ## Next
 
-Stage, then consumer, curated tables, `world_bank_pipeline`, `world_bank_backfill`, analytic outputs, data quality, and the production note.
+Consumer, curated tables, `world_bank_pipeline`, `world_bank_backfill`, analytic outputs, data quality, and the production note.
 
 ## User checkpoints
 

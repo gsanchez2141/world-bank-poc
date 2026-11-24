@@ -30,3 +30,15 @@ services:
       WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
     volumes:
       - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
+
+  lakehouse-stage-world-bank:
+    build:
+      context: .
+      dockerfile: images/stage-world-bank/Dockerfile
+    image: lakehouse-stage-world-bank
+    profiles: ["manual"]
+    network_mode: service:aws-emulator
+    environment:
+      WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
+    volumes:
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro

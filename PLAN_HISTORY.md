@@ -13,3 +13,9 @@ Infra compose, Terraform for the three buckets, SNS, Secrets Manager, and CloudW
 The email ciphertext was created by the user during this MR. Apply succeeds when that file or its key is absent.
 
 User reviews each MR before the next one starts. That review happened: `make platform`, `make test-spike`, and `make down` worked, and the user merged.
+
+## Ingest
+
+Merged to `main` as `af1b325` (pull request #2).
+
+Ingest. Image `lakehouse-ingest-world-bank`, raw responses, record batches of at most 100 rows, attempt prefixes, the raw manifest, CloudWatch logs for that image, and the ingest tests. `make test` runs those tests. This MR had no DAG.
