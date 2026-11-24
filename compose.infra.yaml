@@ -72,6 +72,9 @@ services:
     environment: &airflow-env
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "false"
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session"
+      WORLD_BANK_PIPELINE_SCHEDULE: ${WORLD_BANK_PIPELINE_SCHEDULE:-}
       AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
       AIRFLOW__CORE__FERNET_KEY: "l-J6cg4XYpX2ZXl8BFXlSOzLfiLEdnfQcbwzSGxKZQE="
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/airflow
@@ -85,6 +88,7 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./dags:/opt/airflow/dags:ro
+      - airflow-logs:/opt/airflow/logs
     depends_on:
       postgres:
         condition: service_healthy
@@ -97,12 +101,25 @@ services:
 
   airflow-scheduler:
     image: apache/airflow:2.10.5
+    network_mode: service:aws-emulator
+    group_add:
+      - "${WORLD_BANK_DOCKER_GID:-991}"
     environment:
       <<: *airflow-env
+      WORLD_BANK_EMULATOR_CONTAINER: ${WORLD_BANK_EMULATOR_CONTAINER:-world-bank-aws-emulator-1}
+      WORLD_BANK_EMULATOR_HOST_DIR: ${WORLD_BANK_EMULATOR_HOST_DIR:-${HOME}/.aws/emulator/9297}
+      WORLD_BANK_TEST_API_URL: ${WORLD_BANK_TEST_API_URL:-}
     command: scheduler
     volumes:
       - ./dags:/opt/airflow/dags:ro
+      - ./config:/opt/world-bank/config:ro
+      - ./images/ingest-world-bank/world_bank_ingest/pipeline_run.sql:/opt/world-bank/pipeline_run.sql:ro
+      - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
+      - ${WORLD_BANK_DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock
+      - airflow-logs:/opt/airflow/logs
     depends_on:
+      aws-emulator:
+        condition: service_healthy
       postgres:
         condition: service_healthy
       airflow-webserver:
@@ -116,3 +133,4 @@ services:
 
 volumes:
   postgres-data:
+  airflow-logs:

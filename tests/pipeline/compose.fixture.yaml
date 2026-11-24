@@ -1,0 +1,28 @@
+services:
+  aws-emulator:
+    ports: !reset []
+    environment:
+      HOME: ${PIPELINE_FIXTURE_HOME}
+    volumes: !override
+      - ${PIPELINE_FIXTURE_HOME}/.aws/emulator:${PIPELINE_FIXTURE_HOME}/.aws/emulator
+  iceberg-rest:
+    environment:
+      HOME: ${PIPELINE_FIXTURE_HOME}
+    volumes: !override
+      - ${PIPELINE_FIXTURE_HOME}/.aws/emulator:${PIPELINE_FIXTURE_HOME}/.aws/emulator:ro
+  airflow-webserver:
+    ports: !override
+      - "127.0.0.1::8080"
+  fixture-api:
+    image: python:3.12-slim
+    network_mode: service:aws-emulator
+    depends_on:
+      aws-emulator:
+        condition: service_healthy
+    volumes:
+      - ./tests/pipeline/fixture_services.py:/fixture/server.py:ro
+      - ${PIPELINE_FIXTURE_HOME}/control:/fixture/control:ro
+    command: ["python", "/fixture/server.py"]
+  airflow-scheduler:
+    volumes:
+      - ${PIPELINE_FIXTURE_HOME}/.aws/emulator/9297:/opt/emulator:ro

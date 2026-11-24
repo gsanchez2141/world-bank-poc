@@ -67,6 +67,8 @@ class Reporter:
             self.event("ERROR", "stage_failed", error=error)
         except Exception:
             pass
+        if os.environ.get("WORLD_BANK_ALERT_OWNER") == "airflow":
+            return
         try:
             result = self.sns.publish(TopicArn=self.topic, Message=json.dumps(dict(
                 ingestion_id=self.ingestion_id, task_name="lakehouse-stage-world-bank", error=error)))

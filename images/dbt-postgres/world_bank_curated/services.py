@@ -58,6 +58,8 @@ class Reporter:
             self.event("ERROR", "curated_failed", error=error)
         except Exception:
             pass
+        if os.environ.get("WORLD_BANK_ALERT_OWNER") == "airflow":
+            return
         try:
             response = self.sns.publish(TopicArn=self.topic, Message=json.dumps(dict(
                 ingestion_id=self.ingestion_id, task_name="dbt-postgres", error=error)))

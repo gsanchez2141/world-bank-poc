@@ -39,3 +39,11 @@ Current wave: Postgres consumer. Load exact historical Iceberg snapshots into `s
 Validation: `make test` passed 15 offline unit tests and all three local integration scenarios. The consumer integration verified exact historical loads, lossless decimals, reprocess and zero-change completion, missing-snapshot rejection, and rollback of a failed replacement. Compose configuration, the spike target dry run, and whitespace checks passed. The Auditor passed the consumer scope on the first review.
 
 The user approved a narrow follow-up to skip completed same-ID consumer retries. The focused implementation and Auditor review passed for [Return immediately for a completed load](IMPLEMENTATION_CONTRACT_HISTORY.md#task-consumer-completed-retry--return-immediately-for-a-completed-load). The packaged integration verified that an already-complete retry succeeds with an unavailable snapshot and staging writes guarded. An unfinished retry and distinct reprocess remain covered.
+
+## Curated
+
+Merged PR #5 into main as `54e3542`.
+
+Current wave: curated tables. Build the dbt star from consumer staging, retain provenance, and publish catalog artifacts. The user selected dbt Core 1.12.7 with native model-level lineage and catalog. Contract Acceptance Gate: **Accepted for Machinist** for [Core Postgres star and native dbt catalog](IMPLEMENTATION_CONTRACT_HISTORY.md#wave-curated--core-postgres-star-and-native-dbt-catalog). The independent test suite selection task was accepted, implemented and passed Auditor review. All three named installed suites and the aggregate passed against the local stack. The curated selector now runs the real curated unit and integration suites.
+
+Validation: `make test curated`, the full `make test` (21 unit tests and four local integrations), and both platform spikes passed. The Auditor passed the curated scope with no blockers. The user merged curated before DAG wiring.
