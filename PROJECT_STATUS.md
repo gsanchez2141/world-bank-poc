@@ -4,11 +4,11 @@ Cold start, in this order: [ARCHITECTURE.md](ARCHITECTURE.md), this file, `PLAN.
 
 Objective: local World Bank pipeline at `world-bank-poc`. `make demo` becomes the clean-checkout command in the production-note MR. All cloud calls stay on the AWS emulator at `https://127.0.0.1:9297`.
 
-Branch: `feat/curated`, from `main` at `705efe0`. Platform, ingest, stage, and consumer are merged.
+Branch: `feat/world-bank-pipeline`, from `main` at `54e3542`. Platform, ingest, stage, consumer, and curated are merged.
 
-Current wave: curated tables. Build the dbt star from consumer staging, retain provenance, and publish catalog artifacts. The user selected dbt Core 1.12.7 with native model-level lineage and catalog. Contract Acceptance Gate: **Accepted for Machinist** for [Core Postgres star and native dbt catalog](IMPLEMENTATION_CONTRACT.md#wave-curated--core-postgres-star-and-native-dbt-catalog). The independent test suite selection task was accepted, implemented and passed Auditor review. All three named installed suites and the aggregate passed against the local stack. The curated selector now runs the real curated unit and integration suites.
+Current wave: the `world_bank_pipeline` Airflow DAG. Orchestrate the reviewed job images with one writer, run gating and resume, visible failure, and `make run`. Contract Acceptance Gate: **Accepted for Machinist** for [Only writer DAG and Airflow run command](IMPLEMENTATION_CONTRACT.md#wave-world_bank_pipeline--only-writer-dag-and-airflow-run-command). Local DockerOperator launch and authenticated REST status probes passed. The Auditor passed focused rereview after correction attempt 1 made the trigger report its IDs before submission and made the gate reject non-object input before opening Postgres.
 
-Validation: `make test curated`, the full `make test` (21 unit tests and four local integrations), and both platform spikes passed. The Auditor passed the curated scope with no blockers. The curated wave awaits user review before DAG wiring.
+Validation: the full `make test` passed, including the disposable real Airflow/Docker fixture. After the trigger and gate corrections, `make test pipeline` passed seven offline tests and the same real fixture. It checks one active writer, exact DagRun status, gate-only XCom, failed ingestion and one SNS acknowledgement, abandonment, and same-ID resume without rerunning completed jobs. Compose configuration, selector dry runs, and whitespace checks passed.
 
 Wave list:
 
@@ -18,8 +18,8 @@ Wave list:
 | ingest | feature | done, merged to main |
 | stage | feature | done, merged to main |
 | consumer | feature | done, merged to main |
-| curated | feature | implemented and audited, awaiting user review |
-| world_bank_pipeline | feature | pending |
+| curated | feature | done, merged to main |
+| world_bank_pipeline | feature | implemented and audited, awaiting user review |
 | world_bank_backfill | feature | pending |
 | analytic outputs | feature | pending |
 | data quality | feature | pending |
@@ -27,4 +27,4 @@ Wave list:
 
 Open decisions: none. See `QUESTIONS_AND_DECISIONS.md`.
 
-Curated capability: the dbt Core 1.12.7 and dbt-postgres 1.11.0 probe passed the model build and generated an error-free catalog. The Fusion 2.0.12 strict-analysis and catalog failures are recorded in ARCHITECTURE.md.
+Implementation blockers: none. User review is the checkpoint before the backfill DAG.

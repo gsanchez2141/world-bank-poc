@@ -29,3 +29,7 @@ Acceptance on saved responses covers initial stage, an unchanged rerun, historic
 ## Consumer
 
 Consumer. Load the exact completed stage snapshots into Postgres `stg`, preserving provenance. A retry replaces rows for that ingestion ID atomically. An unchanged stage run completes without inserting rows. The local suite verified recovery after Iceberg commits and atomic warehouse rollback. Merged in PR #4 as 705efe0.
+
+## Curated
+
+Curated tables. Build the dbt star in Postgres from completed consumer loads. Keep stable surrogate keys, preserve source provenance and explicit nulls, and leave omitted observations in place. The reviewed job publishes native dbt model lineage and catalog locally. Merged in PR #5 as 54e3542.
