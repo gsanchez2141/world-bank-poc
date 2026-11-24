@@ -86,13 +86,13 @@ def execute_job(job, **context):
         row = load_run(connection, ingestion_id)
     if not row:
         raise ValueError("pipeline run is missing")
-    if job in ("ingest", "stage") and row["mode"] == "reprocess_commit":
+    if job in ("ingest", "stage") and row["mode"] in ("reprocess_commit", "rebuild"):
         return None
     if row[STATUSES[job]] == "complete":
         return None
     predecessor = {"stage":"raw_status", "consumer":"stage_status", "curated":"consumer_status"}.get(job)
     if predecessor and row[predecessor] != "complete":
-        if not (job == "consumer" and row["mode"] == "reprocess_commit"):
+        if not (job == "consumer" and row["mode"] in ("reprocess_commit", "rebuild")):
             raise ValueError("pipeline predecessor is not complete")
     image = IMAGES[job]
     client = docker.DockerClient(base_url="unix://var/run/docker.sock", version="auto")

@@ -6,7 +6,7 @@ import re
 import sys
 
 from world_bank_stage.iceberg import Catalog
-from .snapshots import read_changes
+from .snapshots import read_changes, read_rebuild
 from .services import ConsumerRuns, Reporter, TABLES, clients, namespace
 
 
@@ -42,9 +42,17 @@ def process(args):
         if invocation["consumer_status"] == "complete":
             print(json.dumps(reporter.event("INFO", "consumer_already_complete")))
             return 0
-        source = select_source(runs, invocation)
-        changes = read_changes(source, lambda: Catalog(selected_namespace))
-        runs.replace(changes)
+        if invocation["mode"] == "rebuild":
+            runs.ensure_empty()
+            catalog = Catalog(selected_namespace)
+            pinned = runs.pin_rebuild(catalog)
+            changes = read_rebuild(catalog, pinned)
+            source = invocation
+            runs.replace(changes, require_empty=True)
+        else:
+            source = select_source(runs, invocation)
+            changes = read_changes(source, lambda: Catalog(selected_namespace))
+            runs.replace(changes)
         counts = {kind: sum(row["change_kind"] == kind for table in TABLES for row in changes[table])
                   for kind in ("close", "append")}
         print(json.dumps(reporter.event("INFO", "consumer_completed", stage_ingestion_id=source["ingestion_id"],

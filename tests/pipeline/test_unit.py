@@ -37,7 +37,7 @@ class GateValidation(unittest.TestCase):
             gate.validate_conf({'ingestion_id':'run1'}, CONFIG, existing)
 
     def test_invalid_inputs_fail(self):
-        for conf in ({'unknown':1}, {'mode':'rebuild'}, {'countries':['BRA','BRA']},
+        for conf in ({'unknown':1}, {'countries':['BRA','BRA']},
                      {'start_year':True}, {'abandon_previous':'yes'}, {'mode':'replay'}):
             with self.subTest(conf=conf), self.assertRaises(ValueError):
                 gate.validate_conf(conf, CONFIG)
@@ -45,6 +45,24 @@ class GateValidation(unittest.TestCase):
             with self.assertRaises(ValueError):
                 gate.ingestion_id({'ingestion_id':value}, 'manual')
         self.assertEqual(gate.fallback_id('manual__123'), gate.fallback_id('manual__123'))
+
+    def test_rebuild_scope_and_immutable_anchor(self):
+        mode, source, scope = gate.validate_conf({'ingestion_id':'restore','mode':'rebuild'}, CONFIG)
+        self.assertEqual((mode, source), ('rebuild', None))
+        self.assertTrue(all(value is None for value in scope.values()))
+        for override in ({'countries':['BRA']}, {'indicators':['SP.POP.TOTL']},
+                         {'start_year':2020}, {'end_year':2021}, {'abandon_previous':False}):
+            with self.subTest(override=override), self.assertRaises(ValueError):
+                gate.validate_conf(dict(mode='rebuild', ingestion_id='restore', **override), CONFIG)
+        source_row = {'mode':'extract', 'stage_status':'complete'}
+        mode, source, _ = gate.validate_conf({'ingestion_id':'restore','mode':'rebuild',
+                                              'source_ingestion_id':'anchor'}, CONFIG, source=source_row)
+        self.assertEqual(source, 'anchor')
+        existing = {'mode':'rebuild','source_ingestion_id':'anchor','abandoned_at':None,
+                    'request_countries':None,'request_indicators':None,'start_year':None,'end_year':None}
+        with self.assertRaises(ValueError):
+            gate.validate_conf({'ingestion_id':'restore','source_ingestion_id':'different'}, CONFIG,
+                               existing=existing, source=source_row)
 
     def test_failure_identity_fallback(self):
         from types import SimpleNamespace

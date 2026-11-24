@@ -33,3 +33,7 @@ Consumer. Load the exact completed stage snapshots into Postgres `stg`, preservi
 ## Curated
 
 Curated tables. Build the dbt star in Postgres from completed consumer loads. Keep stable surrogate keys, preserve source provenance and explicit nulls, and leave omitted observations in place. The reviewed job publishes native dbt model lineage and catalog locally. Merged in PR #5 as 54e3542.
+
+## Writer pipeline
+
+`world_bank_pipeline`. A single-writer Airflow DAG orchestrates the existing jobs, gates and resumes incomplete runs through the warehouse manifest, records failures, and exposes `make run` with the real DAG outcome. The writer DAG is implemented and audited locally. Merged in PR #6 as c557a2f. Reporting exports and `make demo` remain later work.

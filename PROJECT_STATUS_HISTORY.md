@@ -47,3 +47,11 @@ Merged PR #5 into main as `54e3542`.
 Current wave: curated tables. Build the dbt star from consumer staging, retain provenance, and publish catalog artifacts. The user selected dbt Core 1.12.7 with native model-level lineage and catalog. Contract Acceptance Gate: **Accepted for Machinist** for [Core Postgres star and native dbt catalog](IMPLEMENTATION_CONTRACT_HISTORY.md#wave-curated--core-postgres-star-and-native-dbt-catalog). The independent test suite selection task was accepted, implemented and passed Auditor review. All three named installed suites and the aggregate passed against the local stack. The curated selector now runs the real curated unit and integration suites.
 
 Validation: `make test curated`, the full `make test` (21 unit tests and four local integrations), and both platform spikes passed. The Auditor passed the curated scope with no blockers. The user merged curated before DAG wiring.
+
+## Writer pipeline
+
+Merged PR #6 into main as `c557a2f`.
+
+Current wave: the `world_bank_pipeline` Airflow DAG. Orchestrate the reviewed job images with one writer, run gating and resume, visible failure, and `make run`. Contract Acceptance Gate: **Accepted for Machinist** for [Only writer DAG and Airflow run command](IMPLEMENTATION_CONTRACT_HISTORY.md#wave-world_bank_pipeline--only-writer-dag-and-airflow-run-command). Local DockerOperator launch and authenticated REST status probes passed. The Auditor passed focused rereview after correction attempt 1 made the trigger report its IDs before submission and made the gate reject non-object input before opening Postgres.
+
+Validation: the full `make test` passed, including the disposable real Airflow/Docker fixture. After the trigger and gate corrections, `make test pipeline` passed seven offline tests and the same real fixture. It checks one active writer, exact DagRun status, gate-only XCom, failed ingestion and one SNS acknowledgement, abandonment, and same-ID resume without rerunning completed jobs. Compose configuration, selector dry runs, and whitespace checks passed.

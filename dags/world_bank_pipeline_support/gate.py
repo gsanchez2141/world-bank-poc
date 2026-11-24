@@ -49,7 +49,7 @@ def validate_conf(conf, config, existing=None, source=None):
     if "abandon_previous" in conf and type(conf["abandon_previous"]) is not bool:
         raise ValueError("abandon_previous must be a boolean")
     mode = conf.get("mode", existing["mode"] if existing else "extract")
-    if mode not in ("extract", "replay", "reprocess_commit"):
+    if mode not in ("extract", "replay", "reprocess_commit", "rebuild"):
         raise ValueError("unsupported pipeline mode")
     source_id = conf.get("source_ingestion_id", existing["source_ingestion_id"] if existing else None)
     identifier = conf.get("ingestion_id")
@@ -64,13 +64,18 @@ def validate_conf(conf, config, existing=None, source=None):
     if mode != "extract":
         if any(field in conf for field in SCOPE):
             raise ValueError("scope overrides are unavailable for this mode")
-        if not source_id or not source:
+        if mode != "rebuild" and (not source_id or not source):
             raise ValueError("source run not found")
+        if mode == "rebuild" and source_id and (not source or source["mode"] not in ("extract", "replay") or source["stage_status"] != "complete"):
+            raise ValueError("rebuild audit source is not stage-complete")
         if mode == "replay" and (source["mode"] != "extract" or source["raw_status"] != "complete"):
             raise ValueError("replay source extract is not complete")
         if mode == "reprocess_commit" and (source["mode"] not in ("extract", "replay") or source["stage_status"] != "complete"):
             raise ValueError("source stage commit is not complete")
-        scope = {field: source["request_" + field] if field in ("countries", "indicators") else source[field] for field in SCOPE}
+        if mode == "rebuild":
+            scope = {field: None for field in SCOPE}
+        else:
+            scope = {field: source["request_" + field] if field in ("countries", "indicators") else source[field] for field in SCOPE}
     else:
         if source_id is not None:
             raise ValueError("extract cannot name a source")
@@ -113,6 +118,8 @@ def gate(**context):
                 cursor.execute(Path(schema_path).read_text())
                 cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS abandoned_at timestamptz")
                 cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS abandoned_by_ingestion_id text")
+                cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS rebuild_snapshot_ids jsonb")
+                cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS rebuild_pinned_at timestamptz")
         with connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_xact_lock(hashtext('world_bank_pipeline_gate'))")
@@ -125,7 +132,7 @@ def gate(**context):
                 if mode == "extract":
                     cursor.execute("""SELECT ingestion_id FROM meta.pipeline_run
                         WHERE abandoned_at IS NULL AND curated_status <> 'complete'
-                        AND mode IN ('extract','replay','reprocess_commit') FOR UPDATE""")
+                        AND mode IN ('extract','replay','reprocess_commit','rebuild') FOR UPDATE""")
                     blockers = cursor.fetchall()
                     if blockers and not conf.get("abandon_previous", False):
                         raise ValueError("another pipeline run is incomplete")
@@ -133,7 +140,7 @@ def gate(**context):
                         cursor.execute("""UPDATE meta.pipeline_run SET abandoned_at=clock_timestamp(),
                             abandoned_by_ingestion_id=%s WHERE ingestion_id=ANY(%s)""",
                             (identifier, [row["ingestion_id"] for row in blockers]))
-                raw_date = source["raw_date"] if mode == "replay" else datetime.now(timezone.utc).date()
+                raw_date = source["raw_date"] if mode == "replay" else (None if mode == "rebuild" else datetime.now(timezone.utc).date())
                 cursor.execute("""INSERT INTO meta.pipeline_run
                     (ingestion_id,mode,source_ingestion_id,request_countries,request_indicators,start_year,end_year,raw_date)
                     VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",

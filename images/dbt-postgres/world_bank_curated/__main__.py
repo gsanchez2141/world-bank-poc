@@ -21,6 +21,20 @@ def select_stage(runs, invocation):
     mode = invocation["mode"]
     if mode in ("extract", "replay"):
         source = invocation
+    elif mode == "rebuild":
+        pins = invocation.get("rebuild_snapshot_ids")
+        pin_time = invocation.get("rebuild_pinned_at")
+        tables = {"observation", "country", "indicator", "income_level"}
+        if not isinstance(pins, dict) or set(pins) != tables:
+            raise ValueError("invalid rebuild pin selection")
+        for value in pins.values():
+            if value is not None and (not isinstance(value, str) or
+                    not re.fullmatch(r"[1-9][0-9]*", value) or int(value) > 2**63 - 1):
+                raise ValueError("invalid rebuild snapshot ID")
+        if (not isinstance(pin_time, datetime) or pin_time.tzinfo is None or
+                pin_time.utcoffset() != timezone.utc.utcoffset(pin_time)):
+            raise ValueError("invalid rebuild pin timestamp")
+        return dict(invocation, stage_ingested_at=pin_time)
     elif mode == "reprocess_commit":
         source_id = invocation.get("source_ingestion_id")
         if not source_id or source_id == invocation["ingestion_id"]:

@@ -1,6 +1,6 @@
-.PHONY: platform test test-unit test-spike down demo run ingestion stage consumer curated pipeline \
-	test-ingestion test-stage test-consumer test-curated test-pipeline \
-	test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline
+.PHONY: platform test test-unit test-spike down demo run ingestion stage consumer curated pipeline backfill \
+	test-ingestion test-stage test-consumer test-curated test-pipeline test-backfill \
+	test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill
 
 COMPOSE_INFRA = docker compose -f compose.infra.yaml
 COMPOSE_ALL = docker compose -f compose.infra.yaml -f compose.jobs.yaml
@@ -20,14 +20,14 @@ platform:
 	@./scripts/emulator-env.sh ./scripts/email-subscribe.sh
 
 # Explicit selector goals limit the aggregate; without selectors, run every installed suite.
-TEST_SELECTORS = $(filter ingestion stage consumer curated pipeline,$(MAKECMDGOALS))
-INSTALLED_SUITES = ingestion stage consumer curated pipeline
+TEST_SELECTORS = $(filter ingestion stage consumer curated pipeline backfill,$(MAKECMDGOALS))
+INSTALLED_SUITES = ingestion stage consumer curated pipeline backfill
 
 test: $(addprefix test-,$(if $(TEST_SELECTORS),$(TEST_SELECTORS),$(INSTALLED_SUITES)))
 
-ingestion stage consumer curated pipeline:
+ingestion stage consumer curated pipeline backfill:
 
-test-unit: test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline
+test-unit: test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill
 
 test-unit-ingestion:
 	@$(COMPOSE_ALL) build lakehouse-ingest-world-bank
@@ -73,6 +73,16 @@ test-unit-pipeline:
 
 test-pipeline: test-unit-pipeline
 	@python3 -m unittest discover -s tests/pipeline -p test_integration.py
+
+test-unit-backfill:
+	@docker run --rm --network none --entrypoint python \
+		-v "$(CURDIR)/dags:/opt/airflow/dags:ro" \
+		-v "$(CURDIR)/tests/pipeline:/opt/world-bank/tests:ro" \
+		-e PYTHONPATH=/opt/airflow/dags apache/airflow:2.10.5 \
+		-m unittest discover -s /opt/world-bank/tests -p test_backfill_unit.py
+
+test-backfill: test-unit-backfill
+	@python3 -m unittest discover -s tests/pipeline -p test_backfill_integration.py
 
 test-spike:
 	@health=$$(curl -sf --cacert "$(HOME)/.aws/emulator/9297/ca.pem" https://127.0.0.1:9297/__admin/health || true); \
