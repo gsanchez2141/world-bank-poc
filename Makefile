@@ -24,11 +24,16 @@ test-unit:
 	@$(COMPOSE_ALL) build lakehouse-stage-world-bank
 	@docker run --rm --network none --entrypoint /bin/sh lakehouse-stage-world-bank -c "coverage run --source=world_bank_stage -m unittest discover -s stage_tests -p test_unit.py && coverage report -m"
 
+	@$(COMPOSE_ALL) build lakehouse-consumer-postgres
+	@docker run --rm --network none --entrypoint /bin/sh lakehouse-consumer-postgres -c "coverage run --source=world_bank_consumer -m unittest discover -s consumer_tests -p test_unit.py && coverage report -m"
+
 test: test-unit
 	@WORLD_BANK_ALERT_TOPIC_ARN=$$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn) \
 		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python lakehouse-ingest-world-bank -m unittest discover -s tests -p test_integration.py
 	@WORLD_BANK_ALERT_TOPIC_ARN=$$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn) \
 		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python lakehouse-stage-world-bank -m unittest discover -s stage_tests -p test_integration.py
+	@WORLD_BANK_ALERT_TOPIC_ARN=$$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn) \
+		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python lakehouse-consumer-postgres -m unittest discover -s consumer_tests -p test_integration.py
 
 test-spike:
 	@health=$$(curl -sf --cacert "$(HOME)/.aws/emulator/9297/ca.pem" https://127.0.0.1:9297/__admin/health || true); \
