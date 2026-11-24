@@ -1,6 +1,6 @@
 # world-bank-poc
 
-Local platform for the World Bank lakehouse proof of concept. AWS calls stay on the emulator at `https://127.0.0.1:9297`. This checkout does not call AWS or the World Bank API.
+Local platform for the World Bank lakehouse proof of concept. The agreed design is [ARCHITECTURE.md](ARCHITECTURE.md). AWS calls stay on the emulator at `https://127.0.0.1:9297`. This checkout does not call AWS or the World Bank API.
 
 ## Local platform
 
