@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 import psycopg
 from psycopg import sql
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from world_bank_stage.iceberg import fields
 from world_bank_stage.services import clients
@@ -93,8 +94,49 @@ class ConsumerRuns:
     def get(self, run_id):
         return self.db.execute("SELECT * FROM meta.pipeline_run WHERE ingestion_id=%s", (run_id,)).fetchone()
 
-    def replace(self, changes):
+    def ensure_empty(self):
+        relations = [("stg", table) for table in TABLES] + [
+            ("curated", name) for name in ("dim_income_level", "dim_country", "dim_indicator", "dim_year", "fact_indicator_year")
+        ]
+        for schema, table in relations:
+            found = self.db.execute("SELECT to_regclass(%s) AS relation", (f"{schema}.{table}",)).fetchone()["relation"]
+            if found is not None:
+                query = sql.SQL("SELECT EXISTS (SELECT 1 FROM {}.{} LIMIT 1) AS populated").format(
+                    sql.Identifier(schema), sql.Identifier(table))
+                if self.db.execute(query).fetchone()["populated"]:
+                    raise ValueError("rebuild requires empty staging and curated tables")
+
+    def pin_rebuild(self, catalog):
+        from .snapshots import pin_rebuild, validate_rebuild_pins
+        row = self.get(self.id)
+        if row["rebuild_snapshot_ids"] is not None:
+            if row["rebuild_pinned_at"] is None:
+                raise ValueError("rebuild pin timestamp is missing")
+            return validate_rebuild_pins(row["rebuild_snapshot_ids"])
+        if row["rebuild_pinned_at"] is not None:
+            raise ValueError("rebuild pin selection is missing")
+        locked = self.db.execute(
+            "SELECT pg_try_advisory_lock(hashtextextended('world_bank_stage_writer', 0)) AS ok"
+        ).fetchone()["ok"]
+        if not locked:
+            raise ValueError("stage writer is active")
+        try:
+            pinned = pin_rebuild(catalog)
+            self.db.execute("""UPDATE meta.pipeline_run
+                SET rebuild_snapshot_ids=%s,rebuild_pinned_at=clock_timestamp()
+                WHERE ingestion_id=%s AND rebuild_snapshot_ids IS NULL AND rebuild_pinned_at IS NULL""",
+                (Jsonb(pinned), self.id))
+            self.db.commit()
+            return pinned
+        finally:
+            self.db.rollback()
+            self.db.execute("SELECT pg_advisory_unlock(hashtextextended('world_bank_stage_writer', 0))")
+            self.db.commit()
+
+    def replace(self, changes, require_empty=False):
         with self.db.transaction():
+            if require_empty:
+                self.ensure_empty()
             self.db.execute(Path(__file__).with_name("staging.sql").read_text())
             for table in TABLES:
                 self.db.execute(sql.SQL("DELETE FROM stg.{} WHERE consumer_run_id=%s").format(sql.Identifier(table)), (self.id,))

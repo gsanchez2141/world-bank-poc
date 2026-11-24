@@ -62,7 +62,7 @@ Retry the same command to resume an unfinished staging load. A completed load re
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
 ```
 
-`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, or `make test pipeline`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
+`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, `make test pipeline`, or `make test backfill`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
 
 ## Curated star
 
@@ -96,10 +96,34 @@ WORLD_BANK_RUN_CONF='{"ingestion_id":"local-bra"}' make run
 
 Resume preserves the ledger scope. A new extract is blocked while an earlier nonabandoned run is unfinished. To preserve its evidence and explicitly proceed with a new extract, supply `"abandon_previous":true` with the new ingestion ID. An abandoned ID cannot resume.
 
-`extract` and `replay` run the raw and stage jobs before consumer and curated. `replay` requires a different completed extract ID in `source_ingestion_id`. `reprocess_commit` requires a different stage-complete extract or replay ID and runs consumer and curated. `rebuild` is reserved for the later backfill wave.
+`extract` and `replay` run the raw and stage jobs before consumer and curated. `replay` requires a different completed extract ID in `source_ingestion_id`. `reprocess_commit` requires a different stage-complete extract or replay ID and runs consumer and curated. `rebuild` restores current Iceberg rows into empty canonical staging and curated tables.
 
 The scheduler uses the local Docker socket, the emulator network namespace and a read-only emulator credential mount for job containers. Colima defaults to Docker group 991. Set `WORLD_BANK_DOCKER_GID` if the local daemon socket uses another group, or `WORLD_BANK_DOCKER_SOCKET` if its engine-host socket path differs. Read failure and alert events with:
 
 ```sh
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/airflow --log-stream-names local-bra
 ```
+
+
+## Backfill
+
+Trigger the manual `world_bank_backfill` DAG from the Airflow UI or its authenticated local REST API. The parent triggers one writer child, logs its exact Airflow run ID and ingestion ID, and succeeds only when that child succeeds. A parent task retry reattaches to the same child. A new parent run can use the same ingestion ID to resume an unfinished writer.
+
+For example, set the local Airflow endpoint and submit a narrowed extract:
+
+```sh
+AIRFLOW_URL=http://127.0.0.1:8080
+curl -u airflow:airflow -H 'Content-Type: application/json' \
+  -d '{"conf":{"mode":"extract","ingestion_id":"short-bra","countries":["BRA"],"indicators":["SP.POP.TOTL"],"start_year":2021,"end_year":2021}}' \
+  "$AIRFLOW_URL/api/v1/dags/world_bank_backfill/dagRuns"
+```
+
+The same endpoint accepts the following `conf` objects for saved data and recovery:
+
+```json
+{"mode":"replay","ingestion_id":"replay-bra","source_ingestion_id":"short-bra"}
+{"mode":"reprocess_commit","ingestion_id":"reprocess-bra","source_ingestion_id":"short-bra"}
+{"mode":"rebuild","ingestion_id":"restore-warehouse"}
+```
+
+Rebuild requires the four canonical `stg` and five `curated` tables to be absent or empty. It preserves the stage Iceberg tables and restores their pinned current rows into the warehouse. `make run` continues to trigger the writer directly. `make test backfill` runs the backfill tests.

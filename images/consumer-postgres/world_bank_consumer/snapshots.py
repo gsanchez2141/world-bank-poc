@@ -137,3 +137,68 @@ def read_changes(source_row, catalog_factory):
             row.update(change_kind="close", snapshot_id=_snapshot_id(overwrite_id))
         output[table] = closed + opened
     return output
+
+
+def validate_rebuild_pins(pinned_ids):
+    """Validate a complete, lossless selection of current table snapshots."""
+    if not isinstance(pinned_ids, dict) or set(pinned_ids) != set(TABLES):
+        raise ValueError("invalid rebuild snapshot selection")
+    for value in pinned_ids.values():
+        if value is not None:
+            _snapshot_id(value)
+    return pinned_ids
+
+
+def pin_rebuild(catalog):
+    """Read all current heads while the caller holds the stage writer lock."""
+    pinned_ids = {}
+    for table in TABLES:
+        info = catalog.inspect(table)
+        if info is None:
+            pinned_ids[table] = None
+            continue
+        head = info["metadata"].get("current-snapshot-id")
+        if head is None or head == -1:
+            pinned_ids[table] = None
+            continue
+        head = str(head)
+        _snapshot_id(head)
+        snapshots = info["metadata"].get("snapshots", [])
+        if not any(str(snapshot["snapshot-id"]) == head for snapshot in snapshots):
+            raise ValueError("current stage snapshot is unavailable")
+        pinned_ids[table] = head
+    return pinned_ids
+
+
+def read_rebuild(catalog, pinned_ids):
+    """Read current rows from the durable snapshot selection."""
+    validate_rebuild_pins(pinned_ids)
+    output = {table: [] for table in TABLES}
+    for table in TABLES:
+        snapshot_id = pinned_ids[table]
+        if snapshot_id is None:
+            continue
+        info = catalog.inspect(table)
+        if info is None or not any(
+            str(snapshot["snapshot-id"]) == snapshot_id
+            for snapshot in info["metadata"].get("snapshots", [])
+        ):
+            raise ValueError("pinned stage snapshot is unavailable")
+        keys = set()
+        for row in _read(catalog, table, info, _snapshot_id(snapshot_id)):
+            if row.get("is_current") is False:
+                continue
+            if row.get("is_current") is not True:
+                raise ValueError("invalid current status")
+            _required(table, row)
+            if row["valid_to"] is not None:
+                raise ValueError("current stage row has closed validity")
+            key = tuple(row[name] for name in KEY_COLUMNS[table])
+            if any(value is None or isinstance(value, str) and not value for value in key):
+                raise ValueError("invalid stage business key")
+            if key in keys:
+                raise ValueError("duplicate current stage business key")
+            keys.add(key)
+            row.update(change_kind="append", snapshot_id=_snapshot_id(snapshot_id))
+            output[table].append(row)
+    return output

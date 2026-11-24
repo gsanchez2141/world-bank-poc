@@ -73,6 +73,43 @@ class ConsumerUnit(unittest.TestCase):
         read.assert_not_called()
         self.assertIn("consumer_already_complete", output.getvalue())
 
+    def test_rebuild_uses_pinned_heads_and_rejects_corruption(self):
+        class RebuildCatalog(FakeCatalog):
+            def __init__(self):
+                super().__init__([stage_row(2, "42"), stage_row(1, "10", True)])
+                self.head = 11
+                self.available = True
+                self.requested = []
+
+            def inspect(self, table):
+                if table != "observation":
+                    return None
+                return {"metadata-location": self.location(table) + "/metadata/current.json", "metadata": {
+                    "current-snapshot-id": self.head,
+                    "snapshots": [{"snapshot-id": 11}, {"snapshot-id": 12}] if self.available else [{"snapshot-id": 12}]}}
+
+            def query(self, statement):
+                self.requested.append(statement)
+                return [dict(row) for row in self.opened]
+
+        catalog = RebuildCatalog()
+        pins = snapshots.pin_rebuild(catalog)
+        self.assertEqual(pins["observation"], "11")
+        catalog.head = 12
+        result = snapshots.read_rebuild(catalog, pins)
+        self.assertEqual(len(result["observation"]), 1)
+        self.assertEqual(result["observation"][0]["version"], 2)
+        self.assertEqual(result["observation"][0]["snapshot_id"], 11)
+        self.assertIn("snapshot_from_id = 11", catalog.requested[0])
+        catalog.opened.append(stage_row(2, "42"))
+        with self.assertRaises(ValueError):
+            snapshots.read_rebuild(catalog, pins)
+        catalog.available = False
+        with self.assertRaises(ValueError):
+            snapshots.read_rebuild(catalog, pins)
+        with self.assertRaises(ValueError):
+            snapshots.validate_rebuild_pins({"observation": "11"})
+
     def test_zero_skips_catalog(self):
         factory = Mock()
         self.assertEqual(snapshots.read_changes(source(), factory), {name: [] for name in snapshots.TABLES})

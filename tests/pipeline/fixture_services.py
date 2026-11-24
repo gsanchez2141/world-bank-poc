@@ -22,9 +22,16 @@ class Handler(BaseHTTPRequestHandler):
             self.send_error(400)
             return
         if '/country/BRA/indicator/' in path.path:
+            years = query.get('date', ['2020:2021'])[0].split(':')
+            start, end = (int(value) for value in years)
+            selected = [year for year in (2020, 2021) if start <= year <= end]
+            if not 1 <= page <= len(selected):
+                self.send_error(400)
+                return
+            year = selected[page - 1]
             row = {'countryiso3code': 'BRA', 'indicator': {'id': 'SP.POP.TOTL'},
-                   'date': str(2019 + page), 'value': None if page == 1 else (43 if mode == 'correction' else 42)}
-            body = [{'page': page, 'pages': 2, 'total': 2}, [row]]
+                   'date': str(year), 'value': None if year == 2020 else (43 if mode == 'correction' else 42)}
+            body = [{'page': page, 'pages': len(selected), 'total': len(selected)}, [row]]
         elif path.path.endswith('/country/BRA'):
             body = [{'page': 1, 'pages': 1}, [{'id':'BRA','name':'Brazil','incomeLevel':{'id':'UMC'}}]]
         elif path.path.endswith('/indicator/SP.POP.TOTL'):

@@ -10,6 +10,7 @@ import time
 import unittest
 import urllib.request
 from uuid import uuid4
+from fixture import PROVISION
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -38,15 +39,7 @@ class PipelineIntegration(unittest.TestCase):
             try:
                 call('up', '-d', '--no-build', '--wait', timeout=360)
                 # boto3 runs inside the private network and reads only its mounted emulator keys.
-                provision = '''import boto3, configparser
-from botocore.config import Config
-p=configparser.RawConfigParser(); p.read('/opt/emulator/emulator_credentials')
-s=boto3.Session(aws_access_key_id=p['default']['aws_access_key_id'],aws_secret_access_key=p['default']['aws_secret_access_key'],region_name='us-east-1')
-def c(n): return s.client(n,endpoint_url='https://127.0.0.1:9297',verify='/opt/emulator/ca.pem',config=Config(proxies={},s3={'addressing_style':'path'}))
-for b in ['lakehouse-raw','lakehouse-stage','lakehouse-curated']: c('s3').create_bucket(Bucket=b)
-for g in ['/world-bank/airflow','/world-bank/lakehouse-ingest-world-bank','/world-bank/lakehouse-stage-world-bank','/world-bank/lakehouse-consumer-postgres','/world-bank/dbt-postgres']: c('logs').create_log_group(logGroupName=g)
-c('sns').create_topic(Name='world-bank-alerts')'''
-                call('exec', '-T', 'airflow-scheduler', 'python', '-c', provision)
+                call('exec', '-T', 'airflow-scheduler', 'python', '-c', PROVISION)
                 port = call('port', 'airflow-webserver', '8080').stdout.strip().rsplit(':', 1)[-1]
                 env['WORLD_BANK_AIRFLOW_URL'] = f'http://127.0.0.1:{port}'
                 api = env['WORLD_BANK_AIRFLOW_URL'] + '/api/v1/dags/world_bank_pipeline'
@@ -156,6 +149,67 @@ for group in ['/world-bank/airflow','/world-bank/lakehouse-ingest-world-bank']:
                 self.assertEqual(resumed.returncode, 0, resumed.stdout + resumed.stderr)
                 self.assertEqual(before, sql("select raw_attempt_count::text || ':' || stage_snapshot_ids::text from meta.pipeline_run where ingestion_id='fixture_recovery'"))
                 self.assertEqual(sql("select abandoned_by_ingestion_id from meta.pipeline_run where ingestion_id='fixture_bad'"), 'fixture_recovery')
+
+                # A rebuild reads the current Iceberg set, including the 2020 row
+                # absent from the correction, and cannot overwrite populated data.
+                def rebuild():
+                    current = dict(env, WORLD_BANK_RUN_CONF=json.dumps(
+                        {'ingestion_id':'fixture_restore','mode':'rebuild'}))
+                    return subprocess.run(['make','run'], cwd=ROOT, env=current, text=True,
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=360)
+                head_script = '''import json, urllib.request
+for table in ('observation','country','indicator','income_level'):
+ with urllib.request.urlopen('http://127.0.0.1:8181/v1/namespaces/world_bank/tables/'+table) as r:
+  meta=json.load(r)['metadata']
+  print(table, meta.get('current-snapshot-id'))'''
+                heads_before = call('exec','-T','airflow-scheduler','python','-c',head_script).stdout
+                expected_source = sql("select year::text || ':' || coalesce(value::text,'NULL') || ':' || raw_response_key || ':' || ingestion_id || ':' || stage_run_id from stg.observation where consumer_run_id in ('fixture_good','fixture_recovery') and change_kind='append' and ((consumer_run_id='fixture_good' and year=2020) or (consumer_run_id='fixture_recovery' and year=2021)) order by year")
+                existing_fact = sql("select count(*) from curated.fact_indicator_year")
+                rejected = rebuild()
+                self.assertNotEqual(rejected.returncode, 0)
+                self.assertEqual(sql("select count(*) from curated.fact_indicator_year"), existing_fact)
+                self.assertEqual(call('exec','-T','airflow-scheduler','python','-c',head_script).stdout, heads_before)
+
+                sql('TRUNCATE stg.observation, stg.country, stg.indicator, stg.income_level, curated.fact_indicator_year, curated.dim_country, curated.dim_indicator, curated.dim_income_level, curated.dim_year')
+                sql("CREATE FUNCTION curated.fixture_rebuild_reject() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'fixture rebuild dbt failure'; END $$")
+                sql("CREATE TRIGGER fixture_rebuild_reject BEFORE INSERT ON curated.fact_indicator_year FOR EACH ROW EXECUTE FUNCTION curated.fixture_rebuild_reject()")
+                failed = rebuild()
+                self.assertNotEqual(failed.returncode, 0, failed.stdout + failed.stderr)
+                self.assertEqual(sql("select consumer_status||','||curated_status from meta.pipeline_run where ingestion_id='fixture_restore'"), 'complete,failed')
+                pinned = sql("select rebuild_snapshot_ids::text from meta.pipeline_run where ingestion_id='fixture_restore'")
+                pins = json.loads(pinned)
+                expected_heads = {line.split()[0]:line.split()[1] for line in heads_before.splitlines()}
+                self.assertEqual(pins, expected_heads)
+                restored_source = sql("select year::text || ':' || coalesce(value::text,'NULL') || ':' || raw_response_key || ':' || ingestion_id || ':' || stage_run_id from stg.observation where consumer_run_id='fixture_restore' order by year")
+                self.assertEqual(restored_source, expected_source)
+                self.assertEqual(sql("select count(*) from stg.observation where consumer_run_id='fixture_restore'"), '2')
+                self.assertEqual(sql("select count(*) from stg.observation where consumer_run_id='fixture_restore' and year=2020 and value is null"), '1')
+                self.assertEqual(sql("select value::text from stg.observation where consumer_run_id='fixture_restore' and year=2021"), '43.000000000000000000')
+                for table in ('country','indicator','income_level'):
+                    self.assertGreater(int(sql("select count(*) from stg." + table + " where consumer_run_id='fixture_restore' and raw_response_key is not null and stage_run_id is not null")), 0)
+                stage_before = sql("select json_agg(row_to_json(t) order by year)::text from (select * from stg.observation where consumer_run_id='fixture_restore') t")
+                sql('DROP TRIGGER fixture_rebuild_reject ON curated.fact_indicator_year')
+                sql('DROP FUNCTION curated.fixture_rebuild_reject()')
+                restored = rebuild()
+                self.assertEqual(restored.returncode, 0, restored.stdout + restored.stderr)
+                self.assertEqual(sql("select consumer_status||','||curated_status from meta.pipeline_run where ingestion_id='fixture_restore'"), 'complete,complete')
+                self.assertEqual(sql("select rebuild_snapshot_ids::text from meta.pipeline_run where ingestion_id='fixture_restore'"), pinned)
+                self.assertEqual(sql("select json_agg(row_to_json(t) order by year)::text from (select * from stg.observation where consumer_run_id='fixture_restore') t"), stage_before)
+                self.assertEqual(sql("select count(*) from curated.fact_indicator_year"), '2')
+                self.assertEqual(call('exec','-T','airflow-scheduler','python','-c',head_script).stdout, heads_before)
+                check_artifacts = '''import boto3,configparser
+from botocore.config import Config
+p=configparser.RawConfigParser();p.read('/opt/emulator/emulator_credentials')
+s=boto3.Session(aws_access_key_id=p['default']['aws_access_key_id'],aws_secret_access_key=p['default']['aws_secret_access_key'],region_name='us-east-1')
+c=s.client('s3',endpoint_url='https://127.0.0.1:9297',verify='/opt/emulator/ca.pem',config=Config(proxies={},s3={'addressing_style':'path'}))
+print('\\n'.join(x['Key'] for x in c.list_objects_v2(Bucket='lakehouse-curated',Prefix='world-bank/dbt_catalog/').get('Contents',[]) if '/ingestion_id=fixture_restore/' in x['Key']))'''
+                artifact_result = call('exec','-T','airflow-scheduler','python','-c',check_artifacts, check=False)
+                self.assertEqual(artifact_result.returncode, 0, artifact_result.stderr)
+                artifacts = artifact_result.stdout.splitlines()
+                self.assertEqual({Path(key).name for key in artifacts}, {'manifest.json','catalog.json'})
+                pinned_day = sql("select (rebuild_pinned_at at time zone 'UTC')::date::text from meta.pipeline_run where ingestion_id='fixture_restore'")
+                self.assertTrue(all('/date=' + pinned_day + '/ingestion_id=fixture_restore/' in key for key in artifacts))
+
             finally:
                 call('down', '--volumes', '--remove-orphans', check=False, timeout=120)
 
