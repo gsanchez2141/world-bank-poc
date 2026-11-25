@@ -71,3 +71,30 @@ Merged PR #8 into main as `b7fc06a`.
 Current wave: analytic outputs. Produce four Postgres reporting views and publish local CSV plus emulator CSV and Parquet exports. Contract Acceptance Gate: **Accepted for Machinist** for [Calculate the four Postgres reports](IMPLEMENTATION_CONTRACT_HISTORY.md#task-reporting-views--calculate-the-four-postgres-reports). The reporting SQL passed its disposable Postgres fixture and Auditor review. Contract Acceptance Gate: **Accepted for Machinist** for [Publish typed report files and resume after curated](IMPLEMENTATION_CONTRACT_HISTORY.md#task-reporting-export--publish-typed-report-files-and-resume-after-curated).
 
 Validation: `make test analytics`, `make test pipeline`, and the full `make test` passed. The aggregate ran 37 offline and 10 local integration tests. The fixtures verified reporting calculations, typed exports and the local mirror, legacy upgrade, and a same-ID export-only retry after curated completion. The SQL and export scopes passed their separate Auditor reviews. Compose configuration, selector dry runs, and whitespace checks passed.
+
+## Data quality
+
+PR #9 merged at `d08752c`. Both bounded code reviews passed. All eight local suites passed across serial runs with 43 offline and 11 live tests. The live fixtures verified overlapping stage history rejection, warning acknowledgement, and same-ID recovery before export.
+
+## Production design and local demo
+
+Completed locally on `feat/production-demo`. The clean demo and production note passed their bounded reviews.
+
+Validation: `make demo` exited zero from a clean source copy with fresh Terraform state, warehouse volumes and emulator credentials. A test-only network kept the existing local stack running. The tracked ciphertext was present without its key and setup continued. The exact default writer, backfill parent and Brazil 2021 population child all succeeded. Both writer ledger rows completed quality and export. The four printed CSV headers matched their warehouse views and both runs published four CSV and four Parquet reports. Ten pipeline runner tests, Compose validation, the Make dry-run and `git diff --check` passed. The local-to-production design is in [production-design.md](../../production-design.md).
+
+### Missing-data demo
+
+- Complete locally. `make demo missing` ran the seed and omission extracts successfully. After the private stack was removed, the demo CSV showed Brazil’s 2021 GDP of 1,000 and GDP per capita of 10, both flagged `MISSING_FROM_LATEST_EXTRACT`. The live container IDs and ordinary export checksums matched before and after.
+- Accepted for Machinist. See [Demonstrate a retained value after a scoped omission](IMPLEMENTATION_CONTRACT_HISTORY.md#task-demo-missing--demonstrate-a-retained-value-after-a-scoped-omission) for the isolated fixture and CSV verification.
+
+- Auditor conformance passed. The README documents the fixture and its dedicated CSV. Both Make dry runs and `git diff --check` passed. No deferred work.
+
+### Local stack reset
+
+- Complete locally. `make destroy` clears the selected Compose runtime and its volumes so Iceberg and the warehouse can initialize together on the next demo. The disposable-project test confirmed that `make down` retains both volumes, `make destroy` removes them, and Postgres initializes a fresh catalog on restart. The live project and host exports were preserved. Auditor conformance and both Make dry runs passed.
+- Accepted for Machinist. See [Reset the selected local Compose runtime and its volumes](IMPLEMENTATION_CONTRACT_HISTORY.md#task-local-destroy--reset-the-selected-local-compose-runtime-and-its-volumes).
+
+### Airflow schedule startup
+
+- Complete locally. A newly registered pipeline DAG starts paused when a cron or preset is configured. The default manual demo remains ready to run. All 11 pipeline unit tests and Auditor conformance passed. The README explains the pause behavior and identifies the pipeline run status table as the source of the resume scope.
+- Accepted for Machinist. See [Start newly registered scheduled writer DAGs paused](IMPLEMENTATION_CONTRACT_HISTORY.md#task-scheduled-writer-pause--start-newly-registered-scheduled-writer-dags-paused).

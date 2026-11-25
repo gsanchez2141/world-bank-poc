@@ -1,6 +1,6 @@
 # Questions and decisions
 
-The agreed proposal and architecture is [ARCHITECTURE.md](ARCHITECTURE.md). Read that file before this one. The decisions below are constraints inside it. This file does not restate the design.
+The agreed proposal and architecture is [ARCHITECTURE.md](../../ARCHITECTURE.md). Read that file before this one. The decisions below are constraints inside it. This file does not restate the design.
 
 No open questions.
 

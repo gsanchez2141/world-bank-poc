@@ -45,3 +45,13 @@ Curated tables. Build the dbt star in Postgres from completed consumer loads. Ke
 ## Analytic outputs
 
 Analytic outputs. Publish four reporting views with calendar-year and missingness semantics, then produce local CSVs and emulator CSV and Parquet artifacts. The real writer fixture verified that a failed export retries from completed curated state. Analytic outputs are implemented and audited, merged in PR #8 as b7fc06a.
+
+## Data quality
+
+Merged in PR #9. Stage rejects invalid SCD2 history. Curated quality checks gate export, persist scoped disappearance findings, and notify SNS on comparable warning jumps. The live fixture proved missingness clearance and same-ID resume.
+
+## Production design and local demo
+
+The production note and clean-checkout `make demo` are complete locally and ready for user review. The command starts the local platform, waits for the writer and a bounded Brazil 2021 population backfill, and prints the four CSV paths. A live run verified successful exports and optional email setup with no decryption key. The design note documents the AWS and Snowflake mapping, Iceberg maintenance and operating tradeoffs.
+
+The final scope also includes the missing-data demo, local stack reset, scheduled DAG pause default, and sample reports.

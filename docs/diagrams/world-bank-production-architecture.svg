@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="470" viewBox="0 0 1240 470" role="img" aria-labelledby="title desc">
+  <title id="title">World Bank lakehouse production architecture</title>
+  <desc id="desc">Proposed data flow from World Bank through the AWS S3 raw and Iceberg layers into Snowflake staging and curated models, with quality checks before S3 reporting export. A separate band shows orchestration, access, catalog and monitoring services.</desc>
+  <defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#475569"/></marker></defs>
+  <rect width="1240" height="470" rx="12" fill="#f8fafc"/>
+  <g font-family="system-ui, sans-serif" fill="#17263a">
+    <text x="24" y="36" font-size="25" font-weight="700" text-anchor="start" fill="#17263a">World Bank lakehouse · Proposed production architecture</text>
+    <rect x="24" y="62" width="164" height="248" rx="8" fill="#eef2f7" stroke="#aab8ca"/>
+    <text x="40" y="90" font-size="17" font-weight="700" text-anchor="start" fill="#17263a">Source</text>
+    <rect x="200" y="62" width="420" height="248" rx="8" fill="#fff3db" stroke="#d9b46b"/>
+    <text x="216" y="90" font-size="17" font-weight="700" text-anchor="start" fill="#17263a">AWS lakehouse</text>
+    <rect x="632" y="62" width="358" height="248" rx="8" fill="#e5f2fc" stroke="#91b8d6"/>
+    <text x="648" y="90" font-size="17" font-weight="700" text-anchor="start" fill="#17263a">Snowflake warehouse</text>
+    <rect x="1002" y="62" width="214" height="248" rx="8" fill="#edf5e8" stroke="#a4bd94"/>
+    <text x="1018" y="90" font-size="17" font-weight="700" text-anchor="start" fill="#17263a">Consumers</text>
+    <rect x="35" y="138" width="142" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="45" y="150" width="4" height="88" rx="2" fill="#64748b"/>
+    <text x="57" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">World Bank</text>
+    <text x="57" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Indicators API</text>
+    <text x="57" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Public HTTPS</text>
+    <rect x="212" y="138" width="185" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="222" y="150" width="4" height="88" rx="2" fill="#c87c1c"/>
+    <text x="234" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">Raw</text>
+    <text x="234" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">ECS or Glue job</text>
+    <text x="234" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Extract or replay to S3</text>
+    <text x="234" y="227" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">JSON and manifests</text>
+    <rect x="415" y="138" width="193" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="425" y="150" width="4" height="88" rx="2" fill="#c87c1c"/>
+    <text x="437" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">Iceberg stage</text>
+    <text x="437" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">ECS / Glue with DuckDB</text>
+    <text x="437" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">or Glue / EMR Spark</text>
+    <text x="437" y="227" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">SCD2 Iceberg on S3</text>
+    <rect x="644" y="138" width="155" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="654" y="150" width="4" height="88" rx="2" fill="#247cae"/>
+    <text x="666" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">Staging</text>
+    <text x="666" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Consumer loads</text>
+    <text x="666" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">recorded snapshots</text>
+    <rect x="817" y="138" width="161" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="827" y="150" width="4" height="88" rx="2" fill="#247cae"/>
+    <text x="839" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">Curated</text>
+    <text x="839" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">dbt builds star</text>
+    <text x="839" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">and reporting views</text>
+    <text x="839" y="227" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Data quality gate</text>
+    <rect x="1014" y="138" width="190" height="112" rx="8" fill="#ffffff" stroke="#9eacc0"/>
+    <rect x="1024" y="150" width="4" height="88" rx="2" fill="#4a8242"/>
+    <text x="1036" y="167" font-size="15" font-weight="700" text-anchor="start" fill="#17263a">Reporting</text>
+    <text x="1036" y="189" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">Analysts and BI</text>
+    <text x="1036" y="208" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">S3 CSV / Parquet</text>
+    <text x="1036" y="227" font-size="13" font-weight="400" text-anchor="start" fill="#17263a">dbt catalog and lineage</text>
+    <path d="M177 194 H210" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M397 194 H413" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M608 194 H642" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M799 194 H815" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M978 194 H1012" fill="none" stroke="#475569" stroke-width="2" marker-end="url(#arrow)"/>
+    <text x="1089" y="124" font-size="13" font-weight="400" text-anchor="middle" fill="#3d4f65">Reports after DQ passes</text>
+    <text x="216" y="278" font-size="13" font-weight="400" text-anchor="start" fill="#3d4f65">Control tables record run status and successful attempts</text>
+    <text x="648" y="278" font-size="13" font-weight="400" text-anchor="start" fill="#3d4f65"><tspan>Control tables record run status and quality findings</tspan><tspan x="648" dy="18">from stage to export.</tspan></text>
+    <rect x="24" y="329" width="1192" height="119" rx="8" fill="#e9eef6" stroke="#aab8ca"/>
+    <text x="40" y="355" font-size="17" font-weight="700" text-anchor="start" fill="#17263a">Supporting services</text>
+    <rect x="40" y="367" width="276" height="63" rx="8" fill="#ffffff" stroke="#acb9cc"/>
+    <text x="50" y="388" font-size="14" font-weight="700" text-anchor="start" fill="#17263a">Orchestration</text>
+    <text x="50" y="407" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">Amazon MWAA · scheduled runs and backfills</text>
+    <text x="50" y="423" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">One pipeline execution at a time</text>
+    <rect x="329" y="367" width="276" height="63" rx="8" fill="#ffffff" stroke="#acb9cc"/>
+    <text x="339" y="388" font-size="14" font-weight="700" text-anchor="start" fill="#17263a">Security and access</text>
+    <text x="339" y="407" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">AWS IAM roles · AWS Secrets Manager</text>
+    <text x="339" y="423" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">AWS Lake Formation · lake access</text>
+    <rect x="618" y="367" width="276" height="63" rx="8" fill="#ffffff" stroke="#acb9cc"/>
+    <text x="628" y="388" font-size="14" font-weight="700" text-anchor="start" fill="#17263a">Catalog</text>
+    <text x="628" y="410" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">AWS Glue Data Catalog · Iceberg table metadata</text>
+    <rect x="907" y="367" width="276" height="63" rx="8" fill="#ffffff" stroke="#acb9cc"/>
+    <text x="917" y="388" font-size="14" font-weight="700" text-anchor="start" fill="#17263a">Monitoring and alerts</text>
+    <text x="917" y="410" font-size="12" font-weight="400" text-anchor="start" fill="#17263a">CloudWatch Logs · SNS incident notifications</text>
+  </g>
+</svg>
