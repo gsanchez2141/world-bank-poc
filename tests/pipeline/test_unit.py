@@ -129,6 +129,61 @@ class LocalClient(unittest.TestCase):
         with patch.object(client, 'build_opener', return_value=Opener('running')):
             self.assertEqual(client.trigger_and_wait('http://127.0.0.1:8080', {}, timeout=.02, poll_interval=.01), 1)
 
+    def test_backfill_uses_exact_dag_path_and_configuration(self):
+        import json
+        spec = importlib.util.spec_from_file_location('run_pipeline', '/opt/world-bank/scripts/run-pipeline.py')
+        client = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(client)
+
+        class Response:
+            def __init__(self, data): self.data = data
+            def __enter__(self): return self
+            def __exit__(self, *args): pass
+            def read(self): return json.dumps(self.data).encode()
+
+        class Opener:
+            def __init__(self): self.requests = []
+            def open(self, req, timeout):
+                self.requests.append(req)
+                if req.get_method() == 'POST':
+                    self.run_id = json.loads(req.data)['dag_run_id']
+                    return Response({'dag_run_id': self.run_id})
+                return Response({'dag_run_id': self.run_id, 'state': 'success'})
+
+        opener = Opener()
+        conf = {'ingestion_id': 'example', 'mode': 'extract'}
+        with patch.object(client, 'build_opener', return_value=opener):
+            self.assertEqual(client.trigger_and_wait('http://127.0.0.1:8080', conf,
+                             dag='world_bank_backfill'), 0)
+        prefix = 'http://127.0.0.1:8080/api/v1/dags/world_bank_backfill/dagRuns'
+        self.assertEqual(opener.requests[0].full_url, prefix)
+        self.assertEqual(opener.requests[1].full_url, prefix + '/' + opener.run_id)
+        self.assertEqual(json.loads(opener.requests[0].data)['conf'], conf)
+
+    def test_demo_sequences_runs_and_stops_on_failure(self):
+        from contextlib import redirect_stdout
+        spec = importlib.util.spec_from_file_location('run_pipeline', '/opt/world-bank/scripts/run-pipeline.py')
+        client = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(client)
+
+        for outcomes, expected_calls, result in (([1], 1, 1), ([0, 1], 2, 1), ([0, 0], 2, 0)):
+            output = io.StringIO()
+            with self.subTest(outcomes=outcomes), patch.object(client, 'trigger_and_wait',
+                    side_effect=outcomes) as run, patch.dict(client.os.environ,
+                    {'WORLD_BANK_EXPORTS_HOST_DIR': '/tmp/reports'}), redirect_stdout(output):
+                self.assertEqual(client.demo('http://127.0.0.1:8080', 30), result)
+            self.assertEqual(run.call_count, expected_calls)
+            self.assertEqual(run.call_args_list[0].args, ('http://127.0.0.1:8080', {}))
+            if expected_calls == 2:
+                conf = run.call_args_list[1].args[1]
+                self.assertEqual({key: value for key, value in conf.items() if key != 'ingestion_id'},
+                                 {'mode': 'extract', 'countries': ['BRA'],
+                                  'indicators': ['SP.POP.TOTL'], 'start_year': 2021, 'end_year': 2021})
+                self.assertTrue(conf['ingestion_id'].startswith('demo_backfill_'))
+                self.assertEqual(run.call_args_list[1].kwargs['dag'], 'world_bank_backfill')
+            reports = [line for line in output.getvalue().splitlines() if line.startswith('/tmp/reports/')]
+            self.assertEqual(len(reports), 4 if result == 0 else 0)
+
 
 
 if __name__ == '__main__':

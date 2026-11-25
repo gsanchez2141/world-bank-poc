@@ -1,4 +1,4 @@
-.PHONY: platform test test-unit test-spike down demo run ingestion stage consumer curated pipeline backfill analytics dq \
+.PHONY: platform test test-unit test-spike down destroy demo missing run ingestion stage consumer curated pipeline backfill analytics dq \
 	test-ingestion test-stage test-consumer test-curated test-pipeline test-backfill test-analytics test-dq \
 	test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill test-unit-analytics test-unit-dq
 
@@ -119,9 +119,20 @@ test-spike:
 down:
 	@$(COMPOSE_INFRA) down
 
+destroy:
+	@$(COMPOSE_INFRA) down --volumes --remove-orphans
+
 run:
 	@python3 scripts/run-pipeline.py
 
+ifneq ($(filter missing,$(MAKECMDGOALS)),)
 demo:
-	@echo "pipeline demo is not in this MR" >&2
-	@exit 1
+	@$(COMPOSE_ALL) build aws-emulator iceberg-rest lakehouse-ingest-world-bank lakehouse-stage-world-bank lakehouse-consumer-postgres dbt-postgres
+	@python3 scripts/demo-missing.py
+
+missing:
+	@:
+else
+demo: platform
+	@python3 scripts/run-pipeline.py --demo
+endif
