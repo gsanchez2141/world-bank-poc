@@ -8,11 +8,11 @@ The platform, job images, and writer DAG are on `main`. Merge requests stay sepa
 
 ## Now
 
-`world_bank_backfill`. Trigger the single writer DAG with a validated scope, then wait for its exact outcome. Cover extract, replay, reprocess, and rebuilding the current Iceberg state into an empty warehouse. The local fixture verified that scoped backfill preserves data outside its scope. Backfill is implemented and audited, awaiting user review before analytic outputs.
+Analytic outputs. Publish four reporting views with calendar-year and missingness semantics, then produce local CSVs and emulator CSV and Parquet artifacts. The real writer fixture verified that a failed export retries from completed curated state. Analytic outputs are implemented and audited, awaiting user review before data quality.
 
 ## Next
 
-Analytic outputs, data quality, and the production note.
+Data quality, and the production note.
 
 ## User checkpoints
 

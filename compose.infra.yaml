@@ -108,6 +108,7 @@ services:
       <<: *airflow-env
       WORLD_BANK_EMULATOR_CONTAINER: ${WORLD_BANK_EMULATOR_CONTAINER:-world-bank-aws-emulator-1}
       WORLD_BANK_EMULATOR_HOST_DIR: ${WORLD_BANK_EMULATOR_HOST_DIR:-${HOME}/.aws/emulator/9297}
+      WORLD_BANK_EXPORTS_HOST_DIR: ${WORLD_BANK_EXPORTS_HOST_DIR:-${PWD}/exports}
       WORLD_BANK_TEST_API_URL: ${WORLD_BANK_TEST_API_URL:-}
     command: scheduler
     volumes:

@@ -29,10 +29,12 @@ class PrivatePipeline:
         self.home = Path(self.temp.name)
         (self.home / '.aws/emulator').mkdir(parents=True)
         (self.home / 'control').write_text('good')
+        (self.home / 'exports').mkdir()
         self.env = dict(os.environ, PIPELINE_FIXTURE_HOME=str(self.home),
                         WORLD_BANK_EMULATOR_HOST_DIR=str(self.home / '.aws/emulator/9297'),
                         WORLD_BANK_EMULATOR_CONTAINER=f'{self.project}-aws-emulator-1',
-                        WORLD_BANK_TEST_API_URL='http://127.0.0.1:18765/v2')
+                        WORLD_BANK_TEST_API_URL='http://127.0.0.1:18765/v2',
+                        WORLD_BANK_EXPORTS_HOST_DIR=str(self.home / 'exports'))
         self.compose = ['docker','compose','-p',self.project,'-f','compose.infra.yaml',
                         '-f','tests/pipeline/compose.fixture.yaml']
         try:
