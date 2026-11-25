@@ -1,6 +1,6 @@
-.PHONY: platform test test-unit test-spike down demo run ingestion stage consumer curated pipeline backfill analytics \
-	test-ingestion test-stage test-consumer test-curated test-pipeline test-backfill test-analytics \
-	test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill test-unit-analytics
+.PHONY: platform test test-unit test-spike down demo run ingestion stage consumer curated pipeline backfill analytics dq \
+	test-ingestion test-stage test-consumer test-curated test-pipeline test-backfill test-analytics test-dq \
+	test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill test-unit-analytics test-unit-dq
 
 COMPOSE_INFRA = docker compose -f compose.infra.yaml
 COMPOSE_ALL = docker compose -f compose.infra.yaml -f compose.jobs.yaml
@@ -21,14 +21,14 @@ platform:
 	@./scripts/emulator-env.sh ./scripts/email-subscribe.sh
 
 # Explicit selector goals limit the aggregate; without selectors, run every installed suite.
-TEST_SELECTORS = $(filter ingestion stage consumer curated pipeline backfill analytics,$(MAKECMDGOALS))
-INSTALLED_SUITES = ingestion stage consumer curated pipeline backfill analytics
+TEST_SELECTORS = $(filter ingestion stage consumer curated pipeline backfill analytics dq,$(MAKECMDGOALS))
+INSTALLED_SUITES = ingestion stage consumer curated pipeline backfill analytics dq
 
 test: $(addprefix test-,$(if $(TEST_SELECTORS),$(TEST_SELECTORS),$(INSTALLED_SUITES)))
 
-ingestion stage consumer curated pipeline backfill analytics:
+ingestion stage consumer curated pipeline backfill analytics dq:
 
-test-unit: test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill test-unit-analytics
+test-unit: test-unit-ingestion test-unit-stage test-unit-consumer test-unit-curated test-unit-pipeline test-unit-backfill test-unit-analytics test-unit-dq
 
 test-unit-ingestion:
 	@$(COMPOSE_ALL) build lakehouse-ingest-world-bank
@@ -94,6 +94,13 @@ test-analytics: test-unit-analytics
 		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python dbt-postgres -m unittest discover -s analytics_tests -p test_views.py
 	@WORLD_BANK_ALERT_TOPIC_ARN=$$(./scripts/emulator-env.sh terraform -chdir=infra/terraform output -raw topic_arn) \
 		$(COMPOSE_ALL) run --rm --no-deps --entrypoint python dbt-postgres -m unittest discover -s analytics_tests -p test_integration.py
+
+test-unit-dq:
+	@$(COMPOSE_ALL) build dbt-postgres
+	@docker run --rm --network none --entrypoint /bin/sh dbt-postgres -c "coverage run --source=world_bank_dq -m unittest discover -s dq_tests -p test_unit.py && coverage report -m"
+
+test-dq: test-unit-dq
+	@python3 -m unittest discover -s tests/pipeline -p test_dq_integration.py
 
 test-spike:
 	@health=$$(curl -sf --cacert "$(HOME)/.aws/emulator/9297/ca.pem" https://127.0.0.1:9297/__admin/health || true); \

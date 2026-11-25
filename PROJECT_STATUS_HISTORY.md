@@ -63,3 +63,11 @@ Merged PR #7 into main as `9999d71`.
 Current wave: `world_bank_backfill`. Trigger the writer and wait for its exact outcome. Enable rebuild from current Iceberg state into an empty warehouse. Contract Acceptance Gate: **Accepted for Machinist** for [Restore all current Iceberg rows into an empty warehouse](IMPLEMENTATION_CONTRACT_HISTORY.md#task-writer-rebuild--restore-all-current-iceberg-rows-into-an-empty-warehouse). The writer rebuild task passed the bounded Auditor review, consumer suite, and real private scheduler fixture. Contract Acceptance Gate: **Accepted for Machinist** for [Forward validated scope and wait for the exact writer run](IMPLEMENTATION_CONTRACT_HISTORY.md#task-backfill-trigger--forward-validated-scope-and-wait-for-the-exact-writer-run).
 
 Validation: `make test consumer`, `make test pipeline`, `make test backfill`, and the full `make test` passed. The aggregate ran 35 unit tests and six local integrations. Writer rebuild and parent trigger passed their bounded reviews. The final Airflow fixture verified manual child classification, queueing, exact failed-child propagation, narrowed scope preservation and all four modes.
+
+## Analytic outputs
+
+Merged PR #8 into main as `b7fc06a`.
+
+Current wave: analytic outputs. Produce four Postgres reporting views and publish local CSV plus emulator CSV and Parquet exports. Contract Acceptance Gate: **Accepted for Machinist** for [Calculate the four Postgres reports](IMPLEMENTATION_CONTRACT_HISTORY.md#task-reporting-views--calculate-the-four-postgres-reports). The reporting SQL passed its disposable Postgres fixture and Auditor review. Contract Acceptance Gate: **Accepted for Machinist** for [Publish typed report files and resume after curated](IMPLEMENTATION_CONTRACT_HISTORY.md#task-reporting-export--publish-typed-report-files-and-resume-after-curated).
+
+Validation: `make test analytics`, `make test pipeline`, and the full `make test` passed. The aggregate ran 37 offline and 10 local integration tests. The fixtures verified reporting calculations, typed exports and the local mirror, legacy upgrade, and a same-ID export-only retry after curated completion. The SQL and export scopes passed their separate Auditor reviews. Compose configuration, selector dry runs, and whitespace checks passed.

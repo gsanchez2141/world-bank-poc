@@ -62,7 +62,7 @@ Retry the same command to resume an unfinished staging load. A completed load re
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
 ```
 
-`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, `make test pipeline`, `make test backfill`, or `make test analytics`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
+`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, `make test pipeline`, `make test backfill`, `make test analytics`, or `make test dq`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
 
 ## Curated star
 
@@ -139,3 +139,10 @@ A successful writer run publishes CSV and Parquet for the four reports under `s3
 - `exports/vw_income_group_year.csv`
 
 The files are available after `export_status` becomes `complete`. If export fails, resume the same writer ingestion ID with `make run`; already completed upstream work is reused. `make test analytics` runs the reporting view and artifact suites.
+
+
+## Data quality
+
+The writer checks curated data before export. Present population values must be positive, and comparable GDP, population and GDP-per-capita values must agree within the tolerances in `config/pipeline.yml`. For an extract, previously received keys omitted inside its requested scope produce warnings while retained facts remain unchanged. A warning-count jump over the configured comparable baseline publishes a local SNS notification.
+
+A failed quality check leaves the writer run failed and export incomplete. Inspect `meta.dq_result` and the run log, correct the underlying data, and resume the same ingestion ID. The writer reuses completed upstream work and runs quality before export. `make test dq` runs the quality checks and its private writer fixture.

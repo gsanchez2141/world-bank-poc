@@ -106,6 +106,33 @@ class StageUnit(unittest.TestCase):
                 raw_input._business("observation", dict(base, value=value), row)
         self.assertIsNone(raw_input._business("observation", dict(base, value=None), row)[1]["value"])
 
+    def test_full_history_validity(self):
+        first = dict(country_iso3="BRA", indicator_code="SP.POP.TOTL", year=2020,
+                     version=1, valid_from="2025-01-01T00:00:00+00:00",
+                     valid_to="2025-01-02T00:00:00+00:00", is_current=False, record_hash="a")
+        second = dict(first, version=2, valid_from="2025-01-02T00:00:00+00:00",
+                      valid_to="2025-01-03T00:00:00+00:00", record_hash="b")
+        third = dict(first, version=3, valid_from="2025-01-03T00:00:00+00:00",
+                     valid_to=None, is_current=True, record_hash="a")
+        scd2.validate_history("observation", [third, first, second])
+        scd2.validate_history("observation", [])
+        invalid = [
+            [first, second],
+            [first, second, third, dict(third, version=4)],
+            [first, dict(second, version=1), third],
+            [first, dict(second, valid_from=first["valid_from"]), third],
+            [dict(first, valid_to="2025-01-02T12:00:00+00:00"), second, third],
+            [dict(first, valid_to=first["valid_from"]), second, third],
+            [dict(first, valid_to=None), second, third],
+            [first, second, dict(third, valid_to="2025-01-04T00:00:00+00:00")],
+            [first, dict(second, record_hash="a"), third],
+            [first, dict(second, valid_from="2025-01-02T00:00:00"), third],
+            [dict(first, version=0), second, third],
+        ]
+        for rows in invalid:
+            with self.subTest(rows=rows), self.assertRaises(ValueError):
+                scd2.validate_history("observation", rows)
+
     def test_scd2_omission_null_update_and_later_reservation(self):
         t1 = datetime(2025, 1, 1, tzinfo=timezone.utc)
         t2 = datetime(2025, 1, 2, tzinfo=timezone.utc)

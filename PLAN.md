@@ -8,11 +8,11 @@ The platform, job images, and writer DAG are on `main`. Merge requests stay sepa
 
 ## Now
 
-Analytic outputs. Publish four reporting views with calendar-year and missingness semantics, then produce local CSVs and emulator CSV and Parquet artifacts. The real writer fixture verified that a failed export retries from completed curated state. Analytic outputs are implemented and audited, awaiting user review before data quality.
+Data quality is complete locally and ready for user review. Stage rejects invalid SCD2 history. The writer checks curated numeric invariants, records in-scope disappearance without changing retained facts, and alerts on warning-count jumps. Local tests verified clearance after observations return and failure recovery before export.
 
 ## Next
 
-Data quality, and the production note.
+Production note and full local demo.
 
 ## User checkpoints
 
