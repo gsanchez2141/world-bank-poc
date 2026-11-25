@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1006" height="446" viewBox="0 0 1006 446" role="img" aria-labelledby="title">
+  <title id="title">Curated star schema ER diagram</title>
+  <rect width="1006" height="446" rx="12" fill="#f8fafc"/>
+  <defs><marker id="arrow" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#475569"/></marker></defs>
+  <path d="M173 250 V143" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M354 291 H322" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M652 175 H668 V119 H684" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M652 323 H684" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <g transform="translate(354 146)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">FACT_INDICATOR_YEAR</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">string</text>
+    <text x="77" y="54">country_sk</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK, FK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">string</text>
+    <text x="77" y="82">indicator_sk</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">PK, FK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">string</text>
+    <text x="77" y="110">year_sk</text>
+    <text x="284" y="110" text-anchor="end" font-size="12" font-weight="700">PK, FK</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">decimal</text>
+    <text x="77" y="138">value</text>
+    <rect y="147" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="166">string</text>
+    <text x="77" y="166">ingestion_id</text>
+    <rect y="175" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="194">string</text>
+    <text x="77" y="194">raw_response_key</text>
+    <rect y="203" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="222">int</text>
+    <text x="77" y="222">raw_record_index</text>
+    <rect width="298" height="231" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(24 250)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">DIM_COUNTRY</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">string</text>
+    <text x="77" y="54">country_sk</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">string</text>
+    <text x="77" y="82">country_iso3</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">UK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">string</text>
+    <text x="77" y="110">country_name</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">string</text>
+    <text x="77" y="138">income_level_sk</text>
+    <text x="284" y="138" text-anchor="end" font-size="12" font-weight="700">FK</text>
+    <rect width="298" height="147" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(684 24)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">DIM_INDICATOR</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">string</text>
+    <text x="77" y="54">indicator_sk</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">string</text>
+    <text x="77" y="82">indicator_code</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">UK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">string</text>
+    <text x="77" y="110">indicator_name</text>
+    <rect width="298" height="119" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(684 302)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">DIM_YEAR</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">string</text>
+    <text x="77" y="54">year_sk</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">int</text>
+    <text x="77" y="82">year</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">UK</text>
+    <rect width="298" height="91" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(24 24)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">DIM_INCOME_LEVEL</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">string</text>
+    <text x="77" y="54">income_level_sk</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">string</text>
+    <text x="77" y="82">income_level_id</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">UK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">string</text>
+    <text x="77" y="110">income_level_name</text>
+    <rect width="298" height="119" fill="none" stroke="#64748b"/>
+  </g>
+</svg>

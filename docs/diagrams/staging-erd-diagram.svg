@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="668" height="707" viewBox="0 0 668 707" role="img" aria-labelledby="title">
+  <title id="title">Staging diagram</title>
+  <rect width="668" height="707" rx="12" fill="#f8fafc"/>
+  <defs><marker id="arrow" viewBox="0 0 10 10" markerWidth="7" markerHeight="7" refX="9" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#475569"/></marker></defs>
+  <g transform="translate(24 24)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">stg.observation</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">text</text>
+    <text x="105" y="54">consumer_run_id</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">text</text>
+    <text x="105" y="82">change_kind</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">text</text>
+    <text x="105" y="110">country_iso3</text>
+    <text x="284" y="110" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">text</text>
+    <text x="105" y="138">indicator_code</text>
+    <text x="284" y="138" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="147" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="166">integer</text>
+    <text x="105" y="166">year</text>
+    <text x="284" y="166" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="175" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="194">numeric</text>
+    <text x="105" y="194">value</text>
+    <rect y="203" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="222">bigint</text>
+    <text x="105" y="222">snapshot_id</text>
+    <rect y="231" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="250">integer</text>
+    <text x="105" y="250">version</text>
+    <rect y="259" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="278">timestamptz</text>
+    <text x="105" y="278">valid_from</text>
+    <rect y="287" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="306">timestamptz</text>
+    <text x="105" y="306">valid_to</text>
+    <rect y="315" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="334">boolean</text>
+    <text x="105" y="334">is_current</text>
+    <rect width="298" height="343" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(346 24)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">stg.country</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">text</text>
+    <text x="105" y="54">consumer_run_id</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">text</text>
+    <text x="105" y="82">change_kind</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">text</text>
+    <text x="105" y="110">country_iso3</text>
+    <text x="284" y="110" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">text</text>
+    <text x="105" y="138">country_name</text>
+    <rect y="147" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="166">text</text>
+    <text x="105" y="166">income_level_id</text>
+    <rect y="175" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="194">bigint</text>
+    <text x="105" y="194">snapshot_id</text>
+    <rect y="203" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="222">integer</text>
+    <text x="105" y="222">version</text>
+    <rect y="231" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="250">timestamptz</text>
+    <text x="105" y="250">valid_from</text>
+    <rect y="259" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="278">timestamptz</text>
+    <text x="105" y="278">valid_to</text>
+    <rect y="287" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="306">boolean</text>
+    <text x="105" y="306">is_current</text>
+    <rect width="298" height="315" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(24 388)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">stg.indicator</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">text</text>
+    <text x="105" y="54">consumer_run_id</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">text</text>
+    <text x="105" y="82">change_kind</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">text</text>
+    <text x="105" y="110">indicator_code</text>
+    <text x="284" y="110" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">text</text>
+    <text x="105" y="138">indicator_name</text>
+    <rect y="147" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="166">bigint</text>
+    <text x="105" y="166">snapshot_id</text>
+    <rect y="175" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="194">integer</text>
+    <text x="105" y="194">version</text>
+    <rect y="203" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="222">timestamptz</text>
+    <text x="105" y="222">valid_from</text>
+    <rect y="231" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="250">timestamptz</text>
+    <text x="105" y="250">valid_to</text>
+    <rect y="259" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="278">boolean</text>
+    <text x="105" y="278">is_current</text>
+    <rect width="298" height="287" fill="none" stroke="#64748b"/>
+  </g>
+  <g transform="translate(346 388)" font-family="system-ui, sans-serif" font-size="14" fill="#182230">
+    <rect width="298" height="35" fill="#dce8f5"/>
+    <text x="149.0" y="23" text-anchor="middle" font-weight="700">stg.income_level</text>
+    <rect y="35" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="54">text</text>
+    <text x="105" y="54">consumer_run_id</text>
+    <text x="284" y="54" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="63" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="82">text</text>
+    <text x="105" y="82">change_kind</text>
+    <text x="284" y="82" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="91" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="110">text</text>
+    <text x="105" y="110">income_level_id</text>
+    <text x="284" y="110" text-anchor="end" font-size="12" font-weight="700">PK</text>
+    <rect y="119" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="138">text</text>
+    <text x="105" y="138">income_level_name</text>
+    <rect y="147" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="166">bigint</text>
+    <text x="105" y="166">snapshot_id</text>
+    <rect y="175" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="194">integer</text>
+    <text x="105" y="194">version</text>
+    <rect y="203" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="222">timestamptz</text>
+    <text x="105" y="222">valid_from</text>
+    <rect y="231" width="298" height="28" fill="#ffffff"/>
+    <text x="12" y="250">timestamptz</text>
+    <text x="105" y="250">valid_to</text>
+    <rect y="259" width="298" height="28" fill="#eef3f9"/>
+    <text x="12" y="278">boolean</text>
+    <text x="105" y="278">is_current</text>
+    <rect width="298" height="287" fill="none" stroke="#64748b"/>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
 # Agreed proposal and architecture
 
-Local World Bank lakehouse for the take-home assessment. Analysts query a small yearly country-indicator set without calling the API or treating a missing value as zero. One command from a clean checkout is `make demo`. That command is documented in the production-note merge request. Until then, `make demo` and `make run` exit with an error because the pipeline DAG is not in the repo yet.
+This demo runs a World Bank lakehouse locally. Analysts query a small yearly country-indicator set without calling the API or treating a missing value as zero. From a clean checkout, `make demo` starts the platform, runs the writer and a bounded backfill, and prints the CSV paths after both succeed. The [production design note](production-design.md) describes the AWS and Snowflake mapping.
 
 No AWS account, no paid API, and no API key. Every cloud call in this repo uses the AWS emulator at `https://127.0.0.1:9297`.
 
@@ -28,20 +28,31 @@ The default grid is 9 countries × 4 indicators × 7 years = 252 observations. A
 Always-on services live in `compose.infra.yaml`. Job images live in `compose.jobs.yaml` and are not left running.
 
 ```mermaid
-flowchart TB
+flowchart LR
   subgraph platform [compose.infra.yaml]
-    EMU["AWS Emulator\nS3, SNS, Secrets Manager, CloudWatch Logs\n127.0.0.1:9297"]
-    PG["Postgres\nairflow, warehouse, iceberg_catalog"]
-    CAT["Iceberg REST catalog"]
     AF["Airflow"]
+    PG["Postgres"]
+    EMU["AWS Emulator\nS3, SNS, Secrets Manager, CloudWatch Logs\nhttps://127.0.0.1:9297"]
+    CAT["Iceberg REST catalog"]
+
+    AF ---|Airflow metadata and pipeline run status| PG
+    AF ---|SNS alerts and CloudWatch Logs| EMU
+    PG ---|Iceberg catalog metadata| CAT
+    EMU ---|Iceberg objects in S3| CAT
   end
-  CAT --> PG
-  CAT --> EMU
-  AF --> PG
-  AF --> EMU
 ```
 
-Buckets: `lakehouse-raw`, `lakehouse-stage`, `lakehouse-curated`. SNS topic: `world-bank-alerts`. Secret name: `world-bank/alert-email`, with no address stored by Terraform. Log groups: `/world-bank/airflow`, `/world-bank/lakehouse-ingest-world-bank`, `/world-bank/lakehouse-stage-world-bank`, `/world-bank/lakehouse-consumer-postgres`, `/world-bank/dbt-postgres`. A run writes a stream named with its `ingestion_id`. The emulator keeps log events until its process stops. `FilterLogEvents` is how a run is read back.
+* **Buckets** — `lakehouse-raw`, `lakehouse-stage`, `lakehouse-curated`.
+* **SNS topic** — `world-bank-alerts`.
+* **Secret** — `world-bank/alert-email`. Terraform creates the secret without storing an email address.
+* **Log groups**
+  * `/world-bank/airflow`
+  * `/world-bank/lakehouse-ingest-world-bank`
+  * `/world-bank/lakehouse-stage-world-bank`
+  * `/world-bank/lakehouse-consumer-postgres`
+  * `/world-bank/dbt-postgres`
+
+A run writes a stream named with its `ingestion_id`. The emulator keeps log events until its process stops. `FilterLogEvents` is how a run is read back.
 
 `make platform` starts the stack, builds `dbt-postgres`, and applies dev Terraform. `scripts/emulator-env.sh` points Terraform and the AWS CLI at the emulator and prepends `~/.local/bin` for that process only. `make down` stops the stack and keeps the Postgres volume. Emulator objects live until the emulator container stops.
 
@@ -281,8 +292,8 @@ Acceptance, on saved responses:
 | `make platform` | Infra, `dbt-postgres` image, Terraform on the emulator |
 | `make test` | Unit and integration tests for the merge request that added them. On the platform merge request it prints that the suites are not in that MR and exits 0 |
 | `make test-spike` | Iceberg SCD2 spike and dbt Core Postgres spike |
-| `make run` | Trigger `world_bank_pipeline` and wait. Not available until that DAG exists |
-| `make demo` | Platform, then run, then print the CSV paths. Nonzero when the DAG run failed. Documented as the clean-checkout command in the production note |
+| `make run` | Trigger `world_bank_pipeline` and wait for its result |
+| `make demo` | Start the platform, wait for the writer and a bounded backfill, then print CSV paths. Exit nonzero if either run fails |
 | `make down` | Stop the stack and keep the Postgres volume |
 
 ## Merge requests
