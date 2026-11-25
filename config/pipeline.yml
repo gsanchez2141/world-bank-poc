@@ -2,3 +2,9 @@ countries: [BRA, CAN, DEU, GBR, IND, JPN, MEX, USA, ZAF]
 indicators: [SP.POP.TOTL, NY.GDP.MKTP.CD, NY.GDP.PCAP.CD, SP.DYN.LE00.IN]
 start_year: 2018
 end_year: 2024
+
+data_quality:
+  gdp_per_capita:
+    absolute_usd: "1"
+    relative_fraction: "0.01"
+  disappearance_jump_threshold: 1

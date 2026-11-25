@@ -26,8 +26,9 @@ IMAGES = {
     "consumer": "lakehouse-consumer-postgres",
     "curated": "dbt-postgres",
     "export": "dbt-postgres",
+    "dq": "dbt-postgres",
 }
-STATUSES = {"ingest": "raw_status", "stage": "stage_status", "consumer": "consumer_status", "curated": "curated_status", "export": "export_status"}
+STATUSES = {"ingest": "raw_status", "stage": "stage_status", "consumer": "consumer_status", "curated": "curated_status", "export": "export_status", "dq": "dq_status"}
 
 
 def local_clients():
@@ -89,10 +90,12 @@ def execute_job(job, **context):
         raise ValueError("pipeline run is missing")
     if job in ("ingest", "stage") and row["mode"] in ("reprocess_commit", "rebuild"):
         return None
-    if row[STATUSES[job]] == "complete":
+    if job == "dq" and row.get("export_status") == "complete":
         return None
-    predecessor = {"stage":"raw_status", "consumer":"stage_status", "curated":"consumer_status", "export":"curated_status"}.get(job)
-    if predecessor and row[predecessor] != "complete":
+    if row.get(STATUSES[job], "pending") == "complete":
+        return None
+    predecessor = {"stage":"raw_status", "consumer":"stage_status", "curated":"consumer_status", "dq":"curated_status", "export":"dq_status"}.get(job)
+    if predecessor and row.get(predecessor, "pending") != "complete":
         if not (job == "consumer" and row["mode"] in ("reprocess_commit", "rebuild")):
             raise ValueError("pipeline predecessor is not complete")
     image = IMAGES[job]
@@ -116,6 +119,8 @@ def execute_job(job, **context):
         raise ValueError("emulator host directory is not configured")
     mounts = [Mount(source=host_directory, target="/opt/emulator", type="bind", read_only=True)]
     options = {}
+    if job == "dq":
+        options["entrypoint"] = ["python", "-m", "world_bank_dq"]
     if job == "export":
         export_dir = os.environ.get("WORLD_BANK_EXPORTS_HOST_DIR")
         if not export_dir or not os.path.isabs(export_dir) or os.path.normpath(export_dir) != export_dir:

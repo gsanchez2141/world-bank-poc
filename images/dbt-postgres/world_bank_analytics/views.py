@@ -8,6 +8,7 @@ from world_bank_ingest.source import load_scope
 def refresh(connection, config_path):
     scope = load_scope(Namespace(countries=None, indicators=None, start_year=None, end_year=None), config_path)
     with connection.transaction():
+        connection.execute(Path(__file__).with_name("meta.sql").read_text())
         connection.execute(Path(__file__).with_name("reporting.sql").read_text())
         connection.execute("DELETE FROM meta.expected_key")
         connection.execute("""

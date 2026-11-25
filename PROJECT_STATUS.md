@@ -4,11 +4,11 @@ Cold start, in this order: [ARCHITECTURE.md](ARCHITECTURE.md), this file, `PLAN.
 
 Objective: local World Bank pipeline at `world-bank-poc`. `make demo` becomes the clean-checkout command in the production-note MR. All cloud calls stay on the AWS emulator at `https://127.0.0.1:9297`.
 
-Branch: `feat/analytic-outputs`, from `main` at `9999d71`. The job images, writer DAG, and backfill DAG are merged.
+Branch: `feat/data-quality`, from `main` at `b7fc06a`. Analytic outputs and earlier waves are merged.
 
-Current wave: analytic outputs. Produce four Postgres reporting views and publish local CSV plus emulator CSV and Parquet exports. Contract Acceptance Gate: **Accepted for Machinist** for [Calculate the four Postgres reports](IMPLEMENTATION_CONTRACT.md#task-reporting-views--calculate-the-four-postgres-reports). The reporting SQL passed its disposable Postgres fixture and Auditor review. Contract Acceptance Gate: **Accepted for Machinist** for [Publish typed report files and resume after curated](IMPLEMENTATION_CONTRACT.md#task-reporting-export--publish-typed-report-files-and-resume-after-curated).
+Current wave: data quality, ready for user review. The accepted stage history guard rejects overlapping SCD2 intervals before Iceberg writes. The curated DQ gate checks population and comparable GDP per capita, records scoped disappearances without changing retained facts, sends a local SNS warning when the count jumps, and blocks export on a hard failure. Both code reviews passed and the live fixtures closed the remaining validation. The writer fixture proved warning acknowledgement, recovery when omitted data returns, and same-ID retry after a hard quality failure.
 
-Validation: `make test analytics`, `make test pipeline`, and the full `make test` passed. The aggregate ran 37 offline and 10 local integration tests. The fixtures verified reporting calculations, typed exports and the local mirror, legacy upgrade, and a same-ID export-only retry after curated completion. The SQL and export scopes passed their separate Auditor reviews. Compose configuration, selector dry runs, and whitespace checks passed.
+Validation: all eight `make test` selector suites passed across local serial runs (43 offline tests and 11 live tests). Compose configuration, selector dry-runs and `git diff --check` passed. Two overlapping private stacks exhausted the Colima VM's memory and timed out. Both stacks were removed and the affected suites passed serially.
 
 Wave list:
 
@@ -21,10 +21,10 @@ Wave list:
 | curated | feature | done, merged to main |
 | world_bank_pipeline | feature | done, merged to main |
 | world_bank_backfill | feature | done, merged to main |
-| analytic outputs | feature | implemented and audited, awaiting user review |
-| data quality | feature | pending |
+| analytic outputs | feature | done, merged to main |
+| data quality | feature | complete locally, awaiting user review |
 | production note | feature | pending |
 
 Open decisions: none. See `QUESTIONS_AND_DECISIONS.md`.
 
-Implementation blockers: none. User review is the checkpoint before data quality.
+Implementation blockers: none identified.

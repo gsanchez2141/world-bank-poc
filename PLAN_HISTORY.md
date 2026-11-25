@@ -41,3 +41,7 @@ Curated tables. Build the dbt star in Postgres from completed consumer loads. Ke
 ## Backfill
 
 `world_bank_backfill`. Trigger the single writer DAG with a validated scope, then wait for its exact outcome. Cover extract, replay, reprocess, and rebuilding the current Iceberg state into an empty warehouse. The local fixture verified that scoped backfill preserves data outside its scope. Backfill is implemented and audited, merged in PR #7 as 9999d71.
+
+## Analytic outputs
+
+Analytic outputs. Publish four reporting views with calendar-year and missingness semantics, then produce local CSVs and emulator CSV and Parquet artifacts. The real writer fixture verified that a failed export retries from completed curated state. Analytic outputs are implemented and audited, merged in PR #8 as b7fc06a.

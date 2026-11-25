@@ -124,7 +124,7 @@ print(json.dumps([json.loads(e['message']) for e in events]))'''
                 good_run = match.group(1)
                 xcom = request('/dagRuns/' + good_run + '/taskInstances/gate/xcomEntries')
                 self.assertEqual([entry['key'] for entry in xcom['xcom_entries']], ['return_value'])
-                for task in ('ingest', 'stage', 'consumer', 'curated', 'export'):
+                for task in ('ingest', 'stage', 'consumer', 'curated', 'dq', 'export'):
                     values = request('/dagRuns/' + good_run + '/taskInstances/' + task + '/xcomEntries')
                     self.assertEqual(values['xcom_entries'], [])
 
@@ -164,7 +164,7 @@ print(json.dumps([json.loads(e['message']) for e in events]))'''
                 tasks = request('/dagRuns/' + bad_run + '/taskInstances')['task_instances']
                 states = {task['task_id']:task['state'] for task in tasks}
                 self.assertEqual(states['ingest'], 'failed')
-                for task in ('stage','consumer','curated','export'):
+                for task in ('stage','consumer','curated','dq','export'):
                     self.assertIn(states[task], ('upstream_failed','skipped'))
 
                 self.assertEqual(sql("select raw_status from meta.pipeline_run where ingestion_id='fixture_bad'"), 'failed')

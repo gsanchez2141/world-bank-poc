@@ -64,6 +64,11 @@ def process(args):
             print(json.dumps(reporter.event("INFO", "stage_already_complete")))
             return 0
 
+        for table in TABLES:
+            info = catalog.inspect(table)
+            if info is not None:
+                scd2.validate_history(table, catalog.rows(table, info=info))
+
         candidates = raw_input.read_extract(s3, source)
         candidates = raw_input.filter_fresh(s3, candidates, runs.extracts())
         run = runs.reserve(run)
@@ -111,6 +116,10 @@ def process(args):
             reporter.event("INFO", "stage_table_committed", table=table, **{
                 key: entry[key] for key in ("overwrite", "append", "changed_count")})
         verify_completed(catalog, entries)
+        for table in TABLES:
+            info = catalog.inspect(table)
+            if info is not None:
+                scd2.validate_history(table, catalog.rows(table, info=info))
         runs.complete(sum(entry["changed_count"] for entry in entries.values()))
         print(json.dumps(reporter.event("INFO", "stage_completed")))
         return 0

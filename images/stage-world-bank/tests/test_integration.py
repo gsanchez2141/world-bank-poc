@@ -162,6 +162,31 @@ class StageIntegration(unittest.TestCase):
             messages = [json.loads(event["message"]) for event in events]
             self.assertTrue(any(m["event"] == "stage_failed" for m in messages))
             self.assertTrue(any(m["event"] == "alert_published" and m["message_id"] for m in messages))
+
+            # Insert a closed version that overlaps the current 2020 version while
+            # retaining exactly one current row. No valid writer produces this.
+            relation = f"ice.{namespace}.observation"
+            catalog.query(f'''INSERT INTO {relation}
+                SELECT * REPLACE (
+                    99 AS version,
+                    valid_from - INTERVAL '1 day' AS valid_from,
+                    valid_from + INTERVAL '1 day' AS valid_to,
+                    false AS is_current
+                )
+                FROM {relation} WHERE year=2020 AND is_current=true''', expect_rows=False)
+            corrupt_head = str(catalog.inspect("observation")["metadata"]["current-snapshot-id"])
+            corrupt_objects = stage_objects()
+            history_run = publish("invalid_history", 8, [(2020, 32)])
+            history_failure = run(history_run, 1)
+            self.assertIn("stage_failed", history_failure.stderr)
+            self.assertEqual(state(history_run)["stage_status"], "failed")
+            self.assertEqual(str(catalog.inspect("observation")["metadata"]["current-snapshot-id"]), corrupt_head)
+            self.assertEqual(stage_objects(), corrupt_objects)
+            history_events = logs.filter_log_events(logGroupName=GROUP, logStreamNames=[history_run])["events"]
+            history_messages = [json.loads(event["message"]) for event in history_events]
+            self.assertTrue(any(message["event"] == "stage_failed" for message in history_messages))
+            self.assertTrue(any(message["event"] == "alert_published" and message["message_id"] for message in history_messages))
+
         finally:
             db.close()
             for table in raw.TABLES:
