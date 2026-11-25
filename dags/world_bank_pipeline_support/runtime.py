@@ -25,8 +25,9 @@ IMAGES = {
     "stage": "lakehouse-stage-world-bank",
     "consumer": "lakehouse-consumer-postgres",
     "curated": "dbt-postgres",
+    "export": "dbt-postgres",
 }
-STATUSES = {"ingest": "raw_status", "stage": "stage_status", "consumer": "consumer_status", "curated": "curated_status"}
+STATUSES = {"ingest": "raw_status", "stage": "stage_status", "consumer": "consumer_status", "curated": "curated_status", "export": "export_status"}
 
 
 def local_clients():
@@ -90,7 +91,7 @@ def execute_job(job, **context):
         return None
     if row[STATUSES[job]] == "complete":
         return None
-    predecessor = {"stage":"raw_status", "consumer":"stage_status", "curated":"consumer_status"}.get(job)
+    predecessor = {"stage":"raw_status", "consumer":"stage_status", "curated":"consumer_status", "export":"curated_status"}.get(job)
     if predecessor and row[predecessor] != "complete":
         if not (job == "consumer" and row["mode"] in ("reprocess_commit", "rebuild")):
             raise ValueError("pipeline predecessor is not complete")
@@ -113,12 +114,20 @@ def execute_job(job, **context):
     host_directory = os.environ.get("WORLD_BANK_EMULATOR_HOST_DIR")
     if not host_directory or not host_directory.startswith("/"):
         raise ValueError("emulator host directory is not configured")
+    mounts = [Mount(source=host_directory, target="/opt/emulator", type="bind", read_only=True)]
+    options = {}
+    if job == "export":
+        export_dir = os.environ.get("WORLD_BANK_EXPORTS_HOST_DIR")
+        if not export_dir or not os.path.isabs(export_dir) or os.path.normpath(export_dir) != export_dir:
+            raise ValueError("exports host directory is not configured")
+        mounts.append(Mount(source=export_dir, target="/exports", type="bind"))
+        options["entrypoint"] = ["python", "-m", "world_bank_analytics"]
     operator = DockerOperator(
         task_id=f"run_{job}_container", image=image, command=job_arguments(job, row),
         docker_url="unix://var/run/docker.sock", api_version="auto",
-        network_mode=f"container:{emulator}", mounts=[Mount(source=host_directory, target="/opt/emulator", type="bind", read_only=True)],
+        network_mode=f"container:{emulator}", mounts=mounts,
         environment=environment, mount_tmp_dir=False, auto_remove="force", do_xcom_push=False,
-        force_pull=False)
+        force_pull=False, **options)
     operator.execute(context)
     with closing(connect()) as connection:
         updated = load_run(connection, ingestion_id)

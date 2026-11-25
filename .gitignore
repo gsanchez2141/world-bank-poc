@@ -20,3 +20,6 @@ secrets/email.key
 **/target/
 *.duckdb
 .spike-container.sh
+
+# Generated reporting CSV mirror.
+exports/

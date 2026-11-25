@@ -120,6 +120,7 @@ def gate(**context):
                 cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS abandoned_by_ingestion_id text")
                 cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS rebuild_snapshot_ids jsonb")
                 cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS rebuild_pinned_at timestamptz")
+                cursor.execute("ALTER TABLE meta.pipeline_run ADD COLUMN IF NOT EXISTS export_required boolean NOT NULL DEFAULT false")
         with connection:
             with connection.cursor() as cursor:
                 cursor.execute("SELECT pg_advisory_xact_lock(hashtext('world_bank_pipeline_gate'))")
@@ -128,10 +129,12 @@ def gate(**context):
                 source = load_run(connection, source_id) if source_id and valid_id(source_id) else None
                 mode, source_id, scope = validate_conf(conf, config, existing, source)
                 if existing:
+                    cursor.execute("UPDATE meta.pipeline_run SET export_required=true WHERE ingestion_id=%s", (identifier,))
                     return identifier
                 if mode == "extract":
                     cursor.execute("""SELECT ingestion_id FROM meta.pipeline_run
-                        WHERE abandoned_at IS NULL AND curated_status <> 'complete'
+                        WHERE abandoned_at IS NULL AND (curated_status <> 'complete' OR export_status = 'failed'
+                            OR (export_required AND export_status <> 'complete'))
                         AND mode IN ('extract','replay','reprocess_commit','rebuild') FOR UPDATE""")
                     blockers = cursor.fetchall()
                     if blockers and not conf.get("abandon_previous", False):
@@ -142,8 +145,8 @@ def gate(**context):
                             (identifier, [row["ingestion_id"] for row in blockers]))
                 raw_date = source["raw_date"] if mode == "replay" else (None if mode == "rebuild" else datetime.now(timezone.utc).date())
                 cursor.execute("""INSERT INTO meta.pipeline_run
-                    (ingestion_id,mode,source_ingestion_id,request_countries,request_indicators,start_year,end_year,raw_date)
-                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+                    (ingestion_id,mode,source_ingestion_id,request_countries,request_indicators,start_year,end_year,raw_date,export_required)
+                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,true)""",
                     (identifier, mode, source_id, scope["countries"], scope["indicators"],
                      scope["start_year"], scope["end_year"], raw_date))
         return identifier

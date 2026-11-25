@@ -23,10 +23,12 @@ class PipelineIntegration(unittest.TestCase):
             home = Path(directory)
             (home / '.aws/emulator').mkdir(parents=True)
             (home / 'control').write_text('good')
+            (home / 'exports').mkdir()
             env = dict(os.environ, PIPELINE_FIXTURE_HOME=directory,
                        WORLD_BANK_EMULATOR_HOST_DIR=str(home / '.aws/emulator/9297'),
                        WORLD_BANK_EMULATOR_CONTAINER=f'{project}-aws-emulator-1',
-                       WORLD_BANK_TEST_API_URL='http://127.0.0.1:18765/v2')
+                       WORLD_BANK_TEST_API_URL='http://127.0.0.1:18765/v2',
+                       WORLD_BANK_EXPORTS_HOST_DIR=str(home / 'exports'))
             compose = ['docker', 'compose', '-p', project, '-f', 'compose.infra.yaml',
                        '-f', 'tests/pipeline/compose.fixture.yaml']
             def call(*args, check=True, timeout=240):
@@ -67,12 +69,62 @@ class PipelineIntegration(unittest.TestCase):
                 first = run('fixture_good')
                 self.assertEqual(first.returncode, 0, first.stdout + first.stderr)
                 self.assertEqual(sql("select raw_status||','||stage_status||','||consumer_status||','||curated_status from meta.pipeline_run where ingestion_id='fixture_good'"), 'complete,complete,complete,complete')
+                self.assertEqual(sql("select export_status from meta.pipeline_run where ingestion_id='fixture_good'"), 'complete')
+                basenames = ('vw_missing_or_incomplete','vw_yoy_change','vw_latest_year_comparison','vw_income_group_year')
+                self.assertEqual({p.name for p in (home / 'exports').glob('*.csv')},
+                                 {name + '.csv' for name in basenames})
+                check_exports = '''import boto3,configparser,json
+from botocore.config import Config
+p=configparser.RawConfigParser();p.read('/opt/emulator/emulator_credentials')
+s=boto3.Session(aws_access_key_id=p['default']['aws_access_key_id'],aws_secret_access_key=p['default']['aws_secret_access_key'],region_name='us-east-1')
+c=s.client('s3',endpoint_url='https://127.0.0.1:9297',verify='/opt/emulator/ca.pem',config=Config(proxies={},s3={'addressing_style':'path'}))
+import sys
+identifier=sys.argv[1]
+keys=[x['Key'] for x in c.list_objects_v2(Bucket='lakehouse-curated',Prefix='world-bank/reporting/').get('Contents',[]) if '/ingestion_id='+identifier+'/' in x['Key']]
+print(json.dumps(keys))'''
+                keys=json.loads(call('exec','-T','airflow-scheduler','python','-c',check_exports,'fixture_good').stdout)
+                self.assertEqual({Path(key).name for key in keys},
+                                 {name + ext for name in basenames for ext in ('.csv','.parquet')})
+                # An imported pre-export ledger row does not block a new writer.
+                sql("UPDATE meta.pipeline_run SET export_required=false, export_status='pending' WHERE ingestion_id='fixture_good'")
+                target = home / 'exports' / 'vw_income_group_year.csv'
+                target.unlink()
+                target.mkdir()
+                (home / 'control').write_text('good')
+                export_failed=run('fixture_export_failure')
+                self.assertNotEqual(export_failed.returncode,0,export_failed.stdout+export_failed.stderr)
+                self.assertEqual(sql("select raw_status||','||stage_status||','||consumer_status||','||curated_status||','||export_status from meta.pipeline_run where ingestion_id='fixture_export_failure'"), 'complete,complete,complete,complete,failed')
+                before_export=sql("select raw_attempt_count::text || ':' || stage_snapshot_ids::text from meta.pipeline_run where ingestion_id='fixture_export_failure'")
+                blocked_export=run('fixture_export_blocked')
+                self.assertNotEqual(blocked_export.returncode,0)
+                self.assertEqual(sql("select count(*) from meta.pipeline_run where ingestion_id='fixture_export_blocked'"), '0')
+                target.rmdir()
+                current=dict(env,WORLD_BANK_RUN_CONF=json.dumps({'ingestion_id':'fixture_export_failure'}))
+                export_resumed=subprocess.run(['make','run'],cwd=ROOT,env=current,text=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=360)
+                self.assertEqual(export_resumed.returncode,0,export_resumed.stdout+export_resumed.stderr)
+                self.assertEqual(sql("select export_status from meta.pipeline_run where ingestion_id='fixture_export_failure'"),'complete')
+                self.assertEqual(sql("select raw_attempt_count::text || ':' || stage_snapshot_ids::text from meta.pipeline_run where ingestion_id='fixture_export_failure'"),before_export)
+                export_logs = '''import boto3,configparser,json
+from botocore.config import Config
+p=configparser.RawConfigParser();p.read('/opt/emulator/emulator_credentials')
+s=boto3.Session(aws_access_key_id=p['default']['aws_access_key_id'],aws_secret_access_key=p['default']['aws_secret_access_key'],region_name='us-east-1')
+c=s.client('logs',endpoint_url='https://127.0.0.1:9297',verify='/opt/emulator/ca.pem',config=Config(proxies={}))
+events=c.filter_log_events(logGroupName='/world-bank/airflow',logStreamNames=['fixture_export_failure'])['events']
+print(json.dumps([json.loads(e['message']) for e in events]))'''
+                events=json.loads(call('exec','-T','airflow-scheduler','python','-c',export_logs).stdout)
+                self.assertTrue(any(e.get('event')=='pipeline_task_failed' and e.get('task_name')=='export' for e in events))
+                self.assertTrue(any(e.get('event')=='alert_published' and e.get('message_id') for e in events))
+
+                keys=json.loads(call('exec','-T','airflow-scheduler','python','-c',check_exports,'fixture_export_failure').stdout)
+                self.assertEqual({Path(key).name for key in keys},{name+ext for name in basenames for ext in ('.csv','.parquet')})
+                self.assertEqual({p.name for p in (home / 'exports').glob('*.csv')},{name+'.csv' for name in basenames})
+                (home / 'control').write_text('good')
                 match = re.search(r'airflow_run_id=(\S+)', first.stdout)
                 self.assertIsNotNone(match, first.stdout)
                 good_run = match.group(1)
                 xcom = request('/dagRuns/' + good_run + '/taskInstances/gate/xcomEntries')
                 self.assertEqual([entry['key'] for entry in xcom['xcom_entries']], ['return_value'])
-                for task in ('ingest', 'stage', 'consumer', 'curated'):
+                for task in ('ingest', 'stage', 'consumer', 'curated', 'export'):
                     values = request('/dagRuns/' + good_run + '/taskInstances/' + task + '/xcomEntries')
                     self.assertEqual(values['xcom_entries'], [])
 
@@ -112,7 +164,7 @@ class PipelineIntegration(unittest.TestCase):
                 tasks = request('/dagRuns/' + bad_run + '/taskInstances')['task_instances']
                 states = {task['task_id']:task['state'] for task in tasks}
                 self.assertEqual(states['ingest'], 'failed')
-                for task in ('stage','consumer','curated'):
+                for task in ('stage','consumer','curated','export'):
                     self.assertIn(states[task], ('upstream_failed','skipped'))
 
                 self.assertEqual(sql("select raw_status from meta.pipeline_run where ingestion_id='fixture_bad'"), 'failed')

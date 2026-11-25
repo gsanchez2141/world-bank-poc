@@ -19,7 +19,7 @@ with DAG(
 ) as dag:
     gate_task = PythonOperator(task_id="gate", python_callable=gate)
     previous = gate_task
-    for job in ("ingest", "stage", "consumer", "curated"):
+    for job in ("ingest", "stage", "consumer", "curated", "export"):
         task = PythonOperator(task_id=job, python_callable=execute_job,
                               op_kwargs={"job": job}, do_xcom_push=False)
         previous >> task

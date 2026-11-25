@@ -62,7 +62,7 @@ Retry the same command to resume an unfinished staging load. A completed load re
 ./scripts/emulator-env.sh aws logs filter-log-events --log-group-name /world-bank/lakehouse-consumer-postgres --log-stream-names local-extract
 ```
 
-`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, `make test pipeline`, or `make test backfill`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
+`make test` runs all installed unit and integration suites. Select individual suites with `make test ingestion`, `make test stage`, `make test consumer`, `make test curated`, `make test pipeline`, `make test backfill`, or `make test analytics`. Multiple selectors may be combined. Each selection builds its image and runs its unit and integration tests. `make test-unit` runs all installed offline unit suites, and `make test-spike` runs the platform spikes. Integration suites require the local emulator, warehouse and Iceberg REST catalog.
 
 ## Curated star
 
@@ -127,3 +127,15 @@ The same endpoint accepts the following `conf` objects for saved data and recove
 ```
 
 Rebuild requires the four canonical `stg` and five `curated` tables to be absent or empty. It preserves the stage Iceberg tables and restores their pinned current rows into the warehouse. `make run` continues to trigger the writer directly. `make test backfill` runs the backfill tests.
+
+
+## Reporting exports
+
+A successful writer run publishes CSV and Parquet for the four reports under `s3://lakehouse-curated/world-bank/reporting/date={stage-day}/ingestion_id={id}/`. The current successful CSV mirror is written to:
+
+- `exports/vw_missing_or_incomplete.csv`
+- `exports/vw_yoy_change.csv`
+- `exports/vw_latest_year_comparison.csv`
+- `exports/vw_income_group_year.csv`
+
+The files are available after `export_status` becomes `complete`. If export fails, resume the same writer ingestion ID with `make run`; already completed upstream work is reused. `make test analytics` runs the reporting view and artifact suites.

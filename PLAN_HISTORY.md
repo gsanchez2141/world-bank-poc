@@ -37,3 +37,7 @@ Curated tables. Build the dbt star in Postgres from completed consumer loads. Ke
 ## Writer pipeline
 
 `world_bank_pipeline`. A single-writer Airflow DAG orchestrates the existing jobs, gates and resumes incomplete runs through the warehouse manifest, records failures, and exposes `make run` with the real DAG outcome. The writer DAG is implemented and audited locally. Merged in PR #6 as c557a2f. Reporting exports and `make demo` remain later work.
+
+## Backfill
+
+`world_bank_backfill`. Trigger the single writer DAG with a validated scope, then wait for its exact outcome. Cover extract, replay, reprocess, and rebuilding the current Iceberg state into an empty warehouse. The local fixture verified that scoped backfill preserves data outside its scope. Backfill is implemented and audited, merged in PR #7 as 9999d71.

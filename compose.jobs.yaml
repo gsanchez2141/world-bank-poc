@@ -12,6 +12,7 @@ services:
       WORLD_BANK_ALERT_TOPIC_ARN: ${WORLD_BANK_ALERT_TOPIC_ARN:-}
     volumes:
       - ${HOME}/.aws/emulator/9297:/opt/emulator:ro
+      - ${WORLD_BANK_EXPORTS_HOST_DIR:-${PWD}/exports}:/exports
 
   iceberg-spike:
     build:

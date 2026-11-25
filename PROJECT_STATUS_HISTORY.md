@@ -55,3 +55,11 @@ Merged PR #6 into main as `c557a2f`.
 Current wave: the `world_bank_pipeline` Airflow DAG. Orchestrate the reviewed job images with one writer, run gating and resume, visible failure, and `make run`. Contract Acceptance Gate: **Accepted for Machinist** for [Only writer DAG and Airflow run command](IMPLEMENTATION_CONTRACT_HISTORY.md#wave-world_bank_pipeline--only-writer-dag-and-airflow-run-command). Local DockerOperator launch and authenticated REST status probes passed. The Auditor passed focused rereview after correction attempt 1 made the trigger report its IDs before submission and made the gate reject non-object input before opening Postgres.
 
 Validation: the full `make test` passed, including the disposable real Airflow/Docker fixture. After the trigger and gate corrections, `make test pipeline` passed seven offline tests and the same real fixture. It checks one active writer, exact DagRun status, gate-only XCom, failed ingestion and one SNS acknowledgement, abandonment, and same-ID resume without rerunning completed jobs. Compose configuration, selector dry runs, and whitespace checks passed.
+
+## Backfill
+
+Merged PR #7 into main as `9999d71`.
+
+Current wave: `world_bank_backfill`. Trigger the writer and wait for its exact outcome. Enable rebuild from current Iceberg state into an empty warehouse. Contract Acceptance Gate: **Accepted for Machinist** for [Restore all current Iceberg rows into an empty warehouse](IMPLEMENTATION_CONTRACT_HISTORY.md#task-writer-rebuild--restore-all-current-iceberg-rows-into-an-empty-warehouse). The writer rebuild task passed the bounded Auditor review, consumer suite, and real private scheduler fixture. Contract Acceptance Gate: **Accepted for Machinist** for [Forward validated scope and wait for the exact writer run](IMPLEMENTATION_CONTRACT_HISTORY.md#task-backfill-trigger--forward-validated-scope-and-wait-for-the-exact-writer-run).
+
+Validation: `make test consumer`, `make test pipeline`, `make test backfill`, and the full `make test` passed. The aggregate ran 35 unit tests and six local integrations. Writer rebuild and parent trigger passed their bounded reviews. The final Airflow fixture verified manual child classification, queueing, exact failed-child propagation, narrowed scope preservation and all four modes.

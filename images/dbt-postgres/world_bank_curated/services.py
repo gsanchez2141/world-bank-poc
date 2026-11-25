@@ -52,10 +52,10 @@ class Reporter:
         self.token = response.get("nextSequenceToken")
         return message
 
-    def failure(self, error):
-        print(json.dumps(dict(level="ERROR", event="curated_failed", ingestion_id=self.ingestion_id, error=error)), file=sys.stderr)
+    def failure(self, error, event="curated_failed"):
+        print(json.dumps(dict(level="ERROR", event=event, ingestion_id=self.ingestion_id, error=error)), file=sys.stderr)
         try:
-            self.event("ERROR", "curated_failed", error=error)
+            self.event("ERROR", event, error=error)
         except Exception:
             pass
         if os.environ.get("WORLD_BANK_ALERT_OWNER") == "airflow":
@@ -89,6 +89,11 @@ class Runs:
 
     def status(self, status):
         self.db.execute("UPDATE meta.pipeline_run SET curated_status=%s WHERE ingestion_id=%s AND curated_status != 'complete'",
+                        (status, self.id))
+        self.db.commit()
+
+    def export_status(self, status):
+        self.db.execute("UPDATE meta.pipeline_run SET export_status=%s WHERE ingestion_id=%s AND export_status != 'complete'",
                         (status, self.id))
         self.db.commit()
 

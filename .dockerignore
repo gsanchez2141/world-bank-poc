@@ -7,3 +7,6 @@ infra/terraform/*.tfstate*
 **/.venv
 **/__pycache__
 **/coverage
+
+# Generated reporting CSV mirror.
+exports/
