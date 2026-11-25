@@ -1,5 +1,7 @@
 """Offline validation of the Airflow trigger and immutable run identity."""
 import unittest
+import os
+import runpy
 from contextlib import redirect_stdout
 import io
 from types import SimpleNamespace
@@ -9,6 +11,21 @@ from world_bank_pipeline_support import gate, runtime
 
 CONFIG = {'countries':['BRA','CAN'], 'indicators':['SP.POP.TOTL','NY.GDP.MKTP.CD'],
           'start_year':2018, 'end_year':2024}
+
+class DagSchedule(unittest.TestCase):
+    def test_creation_pause_follows_schedule(self):
+        for value, expected_schedule, paused in (
+            (None, None, False),
+            ("", None, False),
+            ("15 2 * * *", "15 2 * * *", True),
+        ):
+            with self.subTest(schedule=value):
+                environment = {} if value is None else {"WORLD_BANK_PIPELINE_SCHEDULE": value}
+                with patch.dict(os.environ, environment, clear=True):
+                    dag = runpy.run_path("/opt/airflow/dags/world_bank_pipeline.py")["dag"]
+                self.assertEqual(dag.schedule_interval, expected_schedule)
+                self.assertEqual(dag.is_paused_upon_creation, paused)
+
 
 class GateValidation(unittest.TestCase):
     def test_gate_rejects_non_object_before_connecting(self):
